@@ -9,3 +9,6 @@ __pycache__/
 .coverage/
 
 .DS_Store
+
+dist/
+build/
