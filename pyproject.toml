@@ -1,0 +1,35 @@
+[project]
+name = "async-hyper"
+version = "0.1.0"
+description = ""
+authors = [{ name = "oneforalone", email = "oneforalone@proton.me" }]
+readme = "README.md"
+requires-python = ">=3.10,<4"
+dependencies = [
+    "aiohttp (>=3.11.13,<4.0.0)",
+    "logging (>=0.4.9.6,<0.5.0.0)",
+    "msgpack (>=1.1.0,<2.0.0)",
+    "eth-account (>=0.13.5,<0.14.0)",
+    "eth-utils (>=5.2.0,<6.0.0)",
+]
+
+[tool.poetry]
+packages = [{ include = "async_hyper", from = "src" }]
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.5"
+pytest-asyncio = "^0.25.3"
+pytest-ruff = "^0.4.1"
+pytest-cov = "^6.0.0"
+pre-commit = "^4.1.0"
+python-dotenv = "^1.0.1"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "--verbose --capture=no"
+asyncio_default_fixture_loop_scope = "session"
