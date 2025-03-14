@@ -7,7 +7,6 @@ from async_hyper.async_api import AsyncAPI
 from async_hyper.utils.miscs import get_timestamp_ms
 from async_hyper.utils.types import (
     Cloid,
-    OrderType,
     LimitOrder,
     EncodedOrder,
     OrderBuilder,
@@ -153,10 +152,13 @@ class AsyncHyper(AsyncAPI):
     async def place_orders(
         self, orders: List[OrderRequest], builder: Optional[OrderBuilder] = None
     ):
-        encoded_orders: List[EncodedOrder] = [
-            encode_order(order, self.get_coin_asset(order["coin"]))
-            for order in orders
-        ]
+        print(orders)
+        encoded_orders: List[EncodedOrder] = []
+        for order in orders:
+            asset = await self.get_coin_asset(order["coin"])
+            print(asset)
+            encoded_orders.append(encode_order(order, asset))
+
         nonce = get_timestamp_ms()
         if builder:
             builder["b"] = builder["b"].lower()
@@ -191,7 +193,7 @@ class AsyncHyper(AsyncAPI):
         px: float,
         is_market: bool = True,
         *,
-        order_type: OrderType = LimitOrder.IOC,
+        order_type: dict = LimitOrder.IOC.value,
         reduce_only: bool = False,
         cloid: Optional[Cloid] = None,
         slippage: float = 0.01,  # Default slippage is 1%
@@ -212,6 +214,7 @@ class AsyncHyper(AsyncAPI):
             "limit_px": px,
             "order_type": order_type,
             "reduce_only": reduce_only,
+            "cloid": cloid,
         }
 
         if cloid:

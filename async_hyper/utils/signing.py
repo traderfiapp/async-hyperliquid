@@ -72,19 +72,6 @@ def sign_action(
     }
 
 
-"""
-order_req = {
-    "coin": "ETH",
-    "is_buy": True,
-    "sz": 0.1,
-    "limit_px": 100,
-    "reduce_only": False,
-    "order_type": {"limit": {"tif": "Gtc"}},
-    "cloid": None,
-}
-"""
-
-
 def round_float(x: float) -> str:
     rounded = f"{x:.8f}"
     if abs(float(rounded) - x) >= 1e-12:
@@ -124,7 +111,7 @@ def encode_order(order: OrderRequest, asset: int) -> EncodedOrder:
     if order["cloid"] is not None:
         encoded_order["c"] = order["cloid"].to_raw()
 
-    return encode_order
+    return encoded_order
 
 
 def orders_to_action(
