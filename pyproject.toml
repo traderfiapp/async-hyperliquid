@@ -13,6 +13,13 @@ dependencies = [
     "eth-utils (>=5.2.0,<6.0.0)",
 ]
 
+[project.urls]
+Homepage = "https://github.com/oneforalone/async-hyper"
+Documentation = "https://github.com/oneforalone/async-hyper"
+Repository = "https://github.com/oneforalone/async-hyper"
+Issues = "https://github.com/oneforalone/async-hyper/issues"
+# Changelog = "https://github.com/oneforalone/async-hyper/blob/master/CHANGELOG.md"
+
 [tool.poetry]
 packages = [{ include = "async_hyper" }]
 
