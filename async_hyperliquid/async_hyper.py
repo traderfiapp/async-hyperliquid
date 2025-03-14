@@ -3,23 +3,23 @@ from typing import Any, Dict, List, Optional
 from aiohttp import ClientSession, ClientTimeout
 from eth_account import Account
 
-from async_hyper.async_api import AsyncAPI
-from async_hyper.utils.miscs import get_timestamp_ms
-from async_hyper.utils.types import (
+from async_hyperliquid.async_api import AsyncAPI
+from async_hyperliquid.utils.miscs import get_timestamp_ms
+from async_hyperliquid.utils.types import (
     Cloid,
     LimitOrder,
     EncodedOrder,
     OrderBuilder,
     OrderRequest,
 )
-from async_hyper.info_endpoint import InfoAPI
-from async_hyper.utils.signing import (
+from async_hyperliquid.info_endpoint import InfoAPI
+from async_hyperliquid.utils.signing import (
     sign_action,
     encode_order,
     orders_to_action,
 )
-from async_hyper.utils.constants import MAINNET_API_URL, TESTNET_API_URL
-from async_hyper.exchange_endpoint import ExchangeAPI
+from async_hyperliquid.utils.constants import MAINNET_API_URL, TESTNET_API_URL
+from async_hyperliquid.exchange_endpoint import ExchangeAPI
 
 
 class AsyncHyper(AsyncAPI):

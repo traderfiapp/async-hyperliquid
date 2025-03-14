@@ -1,6 +1,6 @@
 import pytest
 
-from async_hyper.async_hyper import LimitOrder
+from async_hyperliquid.async_hyper import LimitOrder
 
 
 @pytest.mark.asyncio(loop_scope="session")

@@ -6,7 +6,7 @@ from eth_utils import keccak, to_hex
 from eth_account import Account
 from eth_account.messages import encode_typed_data
 
-from async_hyper.utils.types import (
+from async_hyperliquid.utils.types import (
     OrderType,
     OrderAction,
     EncodedOrder,

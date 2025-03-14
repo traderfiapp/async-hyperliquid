@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest_asyncio
 from dotenv import load_dotenv
 
-from async_hyper.async_hyper import AsyncHyper
+from async_hyperliquid.async_hyper import AsyncHyper
 
 env_file = Path(".env.local")
 load_dotenv(env_file)

@@ -5,7 +5,7 @@ from traceback import TracebackException
 
 from aiohttp import ClientSession
 
-from async_hyper.utils.constants import MAINNET_API_URL
+from async_hyperliquid.utils.constants import MAINNET_API_URL
 
 
 class AsyncAPI:

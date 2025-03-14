@@ -3,8 +3,8 @@ from typing import Optional
 from aiohttp import ClientSession
 from eth_account import Account
 
-from async_hyper.async_api import AsyncAPI
-from async_hyper.utils.types import Endpoint
+from async_hyperliquid.async_api import AsyncAPI
+from async_hyperliquid.utils.types import Endpoint
 
 
 class ExchangeAPI(AsyncAPI):

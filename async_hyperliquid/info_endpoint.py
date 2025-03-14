@@ -2,8 +2,8 @@ from typing import Any, Dict, List
 
 from aiohttp import ClientSession
 
-from async_hyper.async_api import AsyncAPI
-from async_hyper.utils.types import (
+from async_hyperliquid.async_api import AsyncAPI
+from async_hyperliquid.utils.types import (
     Depth,
     Order,
     Endpoint,
