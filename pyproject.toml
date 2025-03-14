@@ -1,6 +1,6 @@
 [project]
-name = "async-hyper"
-version = "0.1.0a0"
+name = "async-hyperliquid"
+version = "0.1.0a1"
 description = "Async Hyperliquid client using aiohttp"
 authors = [{ name = "oneforalone", email = "oneforalone@proton.me" }]
 readme = "README.md"
@@ -14,11 +14,11 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/oneforalone/async-hyper"
-Documentation = "https://github.com/oneforalone/async-hyper"
-Repository = "https://github.com/oneforalone/async-hyper"
-Issues = "https://github.com/oneforalone/async-hyper/issues"
-# Changelog = "https://github.com/oneforalone/async-hyper/blob/master/CHANGELOG.md"
+Homepage = "https://github.com/oneforalone/async-hyperliquid"
+Documentation = "https://github.com/oneforalone/async-hyperliquid"
+Repository = "https://github.com/oneforalone/async-hyperliquid"
+Issues = "https://github.com/oneforalone/async-hyperliquid/issues"
+# Changelog = "https://github.com/oneforalone/async-hyperliquid/blob/master/CHANGELOG.md"
 
 [tool.poetry]
 packages = [{ include = "async_hyper" }]
