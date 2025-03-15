@@ -137,18 +137,18 @@ class AsyncHyper(AsyncAPI):
 
         return None
 
-    async def get_market_price(self, coin: str, is_perp: bool = True) -> float:
+    async def get_market_price(self, coin: str) -> float:
         price = None
         coin_name = await self.get_coin_name(coin)
         asset = await self.get_coin_asset(coin_name)
-        if is_perp:
+        if asset < 10_000:
             resp = await self._info.get_perp_meta_ctx()
         else:
             resp = await self._info.get_spot_meta_ctx()
             asset = asset - 10_000
 
         asset_info = resp[1][asset]
-        price = asset_info["markPx"]
+        price = float(asset_info["markPx"])
 
         return price
 
@@ -211,7 +211,10 @@ class AsyncHyper(AsyncAPI):
         builder: Optional[OrderBuilder] = None,
     ):
         if is_market:
-            px = await self._slippage_price(coin, is_buy, slippage, px)
+            market_price = await self.get_market_price(coin)
+            px = await self._slippage_price(
+                coin, is_buy, slippage, market_price
+            )
             # Market order is an aggressive Limit Order IoC
             order_type = LimitOrder.IOC.value
 

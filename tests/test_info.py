@@ -42,5 +42,5 @@ async def test_get_coin_name(async_hyper, coin: str, name: str) -> None:
 async def test_get_market_price(async_hyper):
     price = await async_hyper.get_market_price("BTC")
     assert price
-    price = await async_hyper.get_market_price("BTC/USDC", is_perp=False)
+    price = await async_hyper.get_market_price("BTC/USDC")
     assert price
