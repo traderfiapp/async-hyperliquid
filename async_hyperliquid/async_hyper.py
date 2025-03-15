@@ -8,6 +8,7 @@ from async_hyperliquid.utils.types import (
     Cloid,
     Position,
     LimitOrder,
+    AccountState,
     EncodedOrder,
     OrderBuilder,
     PlaceOrderRequest,
@@ -151,6 +152,15 @@ class AsyncHyper(AsyncAPI):
         price = float(asset_info["markPx"])
 
         return price
+
+    async def get_account_state(self, address: str = None) -> AccountState:
+        if not address:
+            address = self.address
+
+        perp = await self._info.get_perp_clearinghouse_state(address)
+        spot = await self._info.get_spot_clearinghouse_state(address)
+
+        return {"perp": perp, "spot": spot}
 
     async def update_leverage(
         self, leverage: int, coin: str, is_cross: bool = True

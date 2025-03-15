@@ -281,6 +281,11 @@ class SpotClearinghouseState(TypedDict):
     balances: List[TokenBalance]
 
 
+class AccountState(TypedDict):
+    perp: ClearinghouseState
+    spot: SpotClearinghouseState
+
+
 class GasAuction(TypedDict):
     startTimeSeconds: int
     durationSeconds: int
