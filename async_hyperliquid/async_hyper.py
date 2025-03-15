@@ -211,7 +211,7 @@ class AsyncHyper(AsyncAPI):
         builder: Optional[OrderBuilder] = None,
     ):
         if is_market:
-            px = self._slippage_price(coin, is_buy, slippage, px)
+            px = await self._slippage_price(coin, is_buy, slippage, px)
             # Market order is an aggressive Limit Order IoC
             order_type = LimitOrder.IOC
 
