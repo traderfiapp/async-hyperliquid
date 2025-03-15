@@ -66,13 +66,19 @@ class TriggerOrderType(TypedDict):
 OrderType = Union[LimitOrderType, TriggerOrderType]
 
 
-class OrderRequest(TypedDict):
+class PlaceOrderRequest(TypedDict):
     coin: str
     is_buy: bool
     sz: float
     limit_px: float
     reduce_only: bool
     order_type: OrderType
+    cloid: NotRequired[Cloid]
+
+
+class CancelOrderRequest(TypedDict):
+    coin: str
+    oid: str
     cloid: NotRequired[Cloid]
 
 

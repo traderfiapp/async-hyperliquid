@@ -4,20 +4,16 @@ from aiohttp import ClientSession, ClientTimeout
 from eth_account import Account
 
 from async_hyperliquid.async_api import AsyncAPI
-from async_hyperliquid.utils.miscs import get_timestamp_ms
 from async_hyperliquid.utils.types import (
     Cloid,
     LimitOrder,
     EncodedOrder,
     OrderBuilder,
-    OrderRequest,
+    PlaceOrderRequest,
+    CancelOrderRequest,
 )
 from async_hyperliquid.info_endpoint import InfoAPI
-from async_hyperliquid.utils.signing import (
-    sign_action,
-    encode_order,
-    orders_to_action,
-)
+from async_hyperliquid.utils.signing import encode_order, orders_to_action
 from async_hyperliquid.utils.constants import MAINNET_API_URL, TESTNET_API_URL
 from async_hyperliquid.exchange_endpoint import ExchangeAPI
 
@@ -34,6 +30,8 @@ class AsyncHyper(AsyncAPI):
             self.account, self.session, self.base_url, address=self.address
         )
         self.metas: Optional[Dict[str, Any]] = None
+        # TODO: figure out the vault address
+        self.vault: Optional[str] = None
 
     def _init_coin_assets(self):
         self.coin_assets = {}
@@ -138,36 +136,30 @@ class AsyncHyper(AsyncAPI):
     async def update_leverage(
         self, leverage: int, coin: str, is_cross: bool = True
     ):
-        nonce = get_timestamp_ms()
         action = {
             "type": "updateLeverage",
             "asset": await self.get_coin_asset(coin),
             "isCross": is_cross,
             "leverage": leverage,
         }
-        sig = sign_action(self.account, action, None, nonce, True)
 
-        return await self._exchange.post_action(action, sig, nonce)
+        return await self._exchange.post_action(action)
 
     async def place_orders(
-        self, orders: List[OrderRequest], builder: Optional[OrderBuilder] = None
+        self,
+        orders: List[PlaceOrderRequest],
+        builder: Optional[OrderBuilder] = None,
     ):
-        print(orders)
         encoded_orders: List[EncodedOrder] = []
         for order in orders:
             asset = await self.get_coin_asset(order["coin"])
-            print(asset)
             encoded_orders.append(encode_order(order, asset))
 
-        nonce = get_timestamp_ms()
         if builder:
             builder["b"] = builder["b"].lower()
         action = orders_to_action(encoded_orders, builder)
 
-        # TODO: the third arg is vault_address, which is None for now
-        sig = sign_action(self.account, action, None, nonce, self.is_mainnet)
-
-        return await self._exchange.post_action(action, sig, nonce)
+        return await self._exchange.post_action(action)
 
     async def _slippage_price(
         self, coin: str, is_buy: bool, slippage: float, px: float
@@ -222,13 +214,35 @@ class AsyncHyper(AsyncAPI):
 
         return await self.place_orders([order_req], builder=builder)
 
-    async def cancel_order(self):
-        # TODO: implement cancel order
-        pass
+    async def cancel_order(self, coin: str, oid: int | str):
+        name = await self.get_coin_name(coin)
+        if not isinstance(oid, int):
+            oid = int(oid)
+        cancel_req = {"coin": name, "oid": oid}
+        return await self.cancel_orders([cancel_req])
+
+    async def cancel_orders(self, orders: List[CancelOrderRequest]):
+        # TODO: support cloid
+        action = {
+            "type": "cancel",
+            "cancels": [
+                {
+                    "a": await self.get_coin_asset(order["coin"]),
+                    "o": order["oid"],
+                }
+                for order in orders
+            ],
+        }
+
+        return await self._exchange.post_action(action, self.vault)
 
     async def modify_order(self):
         # TODO: implement modify order
         pass
+
+    async def set_referrer_code(self, code: str):
+        action = {"type": "setReferrer", "code": code}
+        return await self._exchange.post_action(action)
 
     async def close_all_positions(self):
         # TODO: implement close all positions

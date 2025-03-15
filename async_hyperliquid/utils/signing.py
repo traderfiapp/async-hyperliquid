@@ -11,7 +11,7 @@ from async_hyperliquid.utils.types import (
     OrderAction,
     EncodedOrder,
     OrderBuilder,
-    OrderRequest,
+    PlaceOrderRequest,
     SignedAction,
 )
 
@@ -98,7 +98,7 @@ def ensure_order_type(order_type: OrderType) -> OrderType:
     raise ValueError("Invalid order type", order_type)
 
 
-def encode_order(order: OrderRequest, asset: int) -> EncodedOrder:
+def encode_order(order: PlaceOrderRequest, asset: int) -> EncodedOrder:
     encoded_order: EncodedOrder = {
         "a": asset,
         "b": order["is_buy"],
