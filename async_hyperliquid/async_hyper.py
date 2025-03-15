@@ -6,6 +6,7 @@ from eth_account import Account
 from async_hyperliquid.async_api import AsyncAPI
 from async_hyperliquid.utils.types import (
     Cloid,
+    Position,
     LimitOrder,
     EncodedOrder,
     OrderBuilder,
@@ -111,15 +112,18 @@ class AsyncHyper(AsyncAPI):
     async def get_coin_asset(self, coin: str) -> int:
         await self.init_metas()
 
-        if coin not in self.coin_assets:
+        coin_name = await self.get_coin_name(coin)
+
+        if coin_name not in self.coin_assets:
             raise ValueError(f"Coin {coin} not found")
 
-        return self.coin_assets[coin]
+        return self.coin_assets[coin_name]
 
     async def get_coin_sz_decimals(self, coin: str) -> int:
         await self.init_metas()
 
-        asset = await self.get_coin_asset(coin)
+        coin_name = await self.get_coin_name(coin)
+        asset = await self.get_coin_asset(coin_name)
 
         return self.asset_sz_decimals[asset]
 
@@ -132,6 +136,21 @@ class AsyncHyper(AsyncAPI):
                 return spot_metas["tokens"][base]["tokenId"]
 
         return None
+
+    async def get_market_price(self, coin: str, is_perp: bool = True) -> float:
+        price = None
+        coin_name = await self.get_coin_name(coin)
+        asset = await self.get_coin_asset(coin_name)
+        if is_perp:
+            resp = await self._info.get_perp_meta_ctx()
+        else:
+            resp = await self._info.get_spot_meta_ctx()
+            asset = asset - 10_000
+
+        asset_info = resp[1][asset]
+        price = asset_info["markPx"]
+
+        return price
 
     async def update_leverage(
         self, leverage: int, coin: str, is_cross: bool = True
@@ -195,12 +214,11 @@ class AsyncHyper(AsyncAPI):
             px = self._slippage_price(coin, is_buy, slippage, px)
             # Market order is an aggressive Limit Order IoC
             order_type = LimitOrder.IOC
-            reduce_only = False
 
-        name = await self.get_coin_name(coin)
+        coin_name = await self.get_coin_name(coin)
 
         order_req = {
-            "coin": name,
+            "coin": coin_name,
             "is_buy": is_buy,
             "sz": sz,
             "limit_px": px,
@@ -244,10 +262,54 @@ class AsyncHyper(AsyncAPI):
         action = {"type": "setReferrer", "code": code}
         return await self._exchange.post_action(action)
 
-    async def close_all_positions(self):
-        # TODO: implement close all positions
-        pass
+    async def get_all_positions(self, address: str = None) -> List[Position]:
+        if not address:
+            address = self.address
 
-    async def close_position(self, coin: str):
-        # TODO: implement close position
-        pass
+        resp = await self._info.get_perp_clearinghouse_state(address)
+        positions = [p["position"] for p in resp["assetPositions"]]
+        return positions
+
+    async def close_all_positions(self) -> None:
+        positions = await self.get_all_positions()
+        for position in positions:
+            await self.close_position(position["coin"])
+
+    async def close_position(self, coin: str) -> None:
+        positions = await self.get_all_positions()
+        target = {}
+        for position in positions:
+            if coin == position["coin"]:
+                target = position
+
+        if not target:
+            raise ValueError(
+                "User({self.address}) doesn't have position for {coin}"
+            )
+
+        size = float(target["szi"])
+        price = await self.get_market_price(coin)
+        if not price:
+            raise ValueError(f"Failed to retrieve market price for {coin}")
+
+        close_order = {
+            "coin": coin,
+            "is_buy": size < 0,
+            "sz": abs(size),
+            "px": price,
+            "is_market": True,
+            "reduce_only": True,
+        }
+
+        await self.place_order(**close_order)
+
+    def get_leverage_from_positions(
+        self, positions: List[Position]
+    ) -> Dict[str, int]:
+        leverages = {}
+        for position in positions:
+            coin = position["coin"]
+            leverage = position["leverage"]["value"]
+            leverages[coin] = leverage
+
+        return leverages

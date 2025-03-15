@@ -5,10 +5,7 @@ This document outlines pending features, improvements, and tasks for the Async H
 ## High Priority
 
 - [ ] Implement missing order management methods:
-  - `get_all_positions()`: Add functionality to retrieve user's positions
   - [ ] `modify_order()`: Add functionality to modify existing orders
-  - [ ] `close_all_positions()`: Add functionality to close all open positions
-  - [ ] `close_position()`: Add functionality to close a specific position
 
 - [ ] Add comprehensive error handling:
   - [ ] Implement proper exception handling and custom exceptions

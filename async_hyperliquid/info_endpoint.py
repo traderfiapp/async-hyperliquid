@@ -146,7 +146,9 @@ class InfoAPI(AsyncAPI):
         payloads = {"type": "metaAndAssetCtxs"}
         return await self.post(payloads)
 
-    async def get_positions(self, address: str) -> ClearinghouseState:
+    async def get_perp_clearinghouse_state(
+        self, address: str
+    ) -> ClearinghouseState:
         payloads = {"type": "clearinghouseState", "user": address}
         return await self.post(payloads)
 
@@ -194,7 +196,9 @@ class InfoAPI(AsyncAPI):
         payloads = {"type": "spotMetaAndAssetCtxs"}
         return await self.post(payloads)
 
-    async def get_user_balances(self, address: str) -> SpotClearinghouseState:
+    async def get_spot_clearinghouse_state(
+        self, address: str
+    ) -> SpotClearinghouseState:
         payloads = {"type": "spotClearinghouseState", "user": address}
         return await self.post(payloads)
 

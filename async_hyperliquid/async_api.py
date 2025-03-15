@@ -36,7 +36,7 @@ class AsyncAPI:
     async def post(self, payloads: Optional[dict] = None) -> dict:
         payloads = payloads or {}
         req_path = f"{self.base_url}/{self.endpoint.value}"
-        self.logger.info(f"POST {req_path} {payloads}")
+        self.logger.debug(f"POST {req_path} {payloads}")
         async with self.session.post(req_path, json=payloads) as resp:
             resp.raise_for_status()
             try:

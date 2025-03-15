@@ -36,3 +36,11 @@ async def test_metas(async_hyper):
 async def test_get_coin_name(async_hyper, coin: str, name: str) -> None:
     coin_name = await async_hyper.get_coin_name(coin)
     assert coin_name == name
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_market_price(async_hyper):
+    price = await async_hyper.get_market_price("BTC")
+    assert price
+    price = await async_hyper.get_market_price("BTC/USDC", is_perp=False)
+    assert price
