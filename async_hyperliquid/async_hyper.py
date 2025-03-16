@@ -118,11 +118,15 @@ class AsyncHyper(AsyncAPI):
 
         return self.coin_assets[coin_name]
 
-    async def get_coin_symbol(self, coin_name: str) -> str:
+    async def get_coin_symbol(self, coin: str) -> str:
         if not hasattr(self, "coin_symbols") or not self.coin_symbols:
             await self.init_metas()
-            self.coin_symbols = {v: k for k, v in self.coin_names.items()}
-
+            self.coin_symbols = {
+                v: k
+                for k, v in self.coin_names.items()
+                if not k.startswith("@")
+            }
+        coin_name = await self.get_coin_name(coin)
         return self.coin_symbols[coin_name]
 
     async def get_coin_sz_decimals(self, coin: str) -> int:

@@ -13,12 +13,13 @@ async def test_update_leverage(async_hyper):
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_spot_order(async_hyper):
-    coin = "BTC/USDC"
+    # coin = "BTC/USDC"
+    coin = "@142"  # @142 is the coin name for symbol BTC/USDC
     buy_value = 10 + 0.3
     buy_price = 10_000.0
     buy_sz = buy_value / buy_price
     order_req = {
-        "coin": "BTC/USDC",
+        "coin": coin,
         "is_buy": True,
         "sz": buy_sz,
         "px": buy_price,

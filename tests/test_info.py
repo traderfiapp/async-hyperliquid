@@ -24,6 +24,7 @@ async def test_metas(async_hyper):
         ("BTC/USDC", "@142"),
         ("HYPE/USDC", "@107"),
         ("PURR/USDC", "PURR/USDC"),
+        ("@142", "@142"),
         pytest.param(
             "ETH/USDC",
             None,
@@ -36,6 +37,29 @@ async def test_metas(async_hyper):
 async def test_get_coin_name(async_hyper, coin: str, name: str) -> None:
     coin_name = await async_hyper.get_coin_name(coin)
     assert coin_name == name
+
+
+@pytest.mark.asyncio(loop_scope="session")
+@pytest.mark.parametrize(
+    "coin, symbol",
+    [
+        ("BTC", "BTC"),
+        ("BTC/USDC", "BTC/USDC"),
+        ("@142", "BTC/USDC"),
+        ("@107", "HYPE/USDC"),
+        ("PURR/USDC", "PURR/USDC"),
+        pytest.param(
+            "ETH/USDC",
+            None,
+            marks=pytest.mark.xfail(
+                raises=ValueError, reason="ETH/USDC is not supported"
+            ),
+        ),
+    ],
+)
+async def test_get_coin_symbol(async_hyper, coin: str, symbol: str) -> None:
+    coin_symbol = await async_hyper.get_coin_symbol(coin)
+    assert coin_symbol == symbol
 
 
 @pytest.mark.asyncio(loop_scope="session")
