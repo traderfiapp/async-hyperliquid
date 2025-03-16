@@ -111,18 +111,21 @@ class AsyncHyper(AsyncAPI):
         return self.coin_names[coin]
 
     async def get_coin_asset(self, coin: str) -> int:
-        await self.init_metas()
-
         coin_name = await self.get_coin_name(coin)
 
         if coin_name not in self.coin_assets:
-            raise ValueError(f"Coin {coin} not found")
+            raise ValueError(f"Coin {coin}({coin_name}) not found")
 
         return self.coin_assets[coin_name]
 
-    async def get_coin_sz_decimals(self, coin: str) -> int:
-        await self.init_metas()
+    async def get_coin_symbol(self, coin_name: str) -> str:
+        if not hasattr(self, "coin_symbols") or not self.coin_symbols:
+            await self.init_metas()
+            self.coin_symbols = {v: k for k, v in self.coin_names.items()}
 
+        return self.coin_symbols[coin_name]
+
+    async def get_coin_sz_decimals(self, coin: str) -> int:
         coin_name = await self.get_coin_name(coin)
         asset = await self.get_coin_asset(coin_name)
 
