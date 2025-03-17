@@ -68,3 +68,10 @@ async def test_get_market_price(async_hyper):
     assert price
     price = await async_hyper.get_market_price("BTC/USDC")
     assert price
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_all_market_prices(async_hyper):
+    prices = await async_hyper.get_all_market_prices()
+    assert isinstance(prices, dict)
+    assert "@142" in prices

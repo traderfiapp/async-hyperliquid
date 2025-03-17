@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from aiohttp import ClientSession, ClientTimeout
 from eth_account import Account
@@ -146,19 +146,32 @@ class AsyncHyper(AsyncAPI):
         return None
 
     async def get_market_price(self, coin: str) -> float:
-        price = None
         coin_name = await self.get_coin_name(coin)
-        asset = await self.get_coin_asset(coin_name)
-        if asset < 10_000:
-            resp = await self._info.get_perp_meta_ctx()
-        else:
-            resp = await self._info.get_spot_meta_ctx()
-            asset = asset - 10_000
+        market_prices = await self.get_all_market_prices()
+        return market_prices[coin_name]
 
-        asset_info = resp[1][asset]
-        price = float(asset_info["markPx"])
+    async def get_all_market_prices(
+        self, market: Literal["spot", "perp", "all"] = "all"
+    ) -> Dict[str, float]:
+        is_spot = market == "spot"
+        is_perp = market == "perp"
+        is_all = market == "all"
 
-        return price
+        prices = {}
+
+        await self.init_metas()
+        if is_spot or is_all:
+            spot_data = await self._info.get_spot_meta_ctx()
+        if is_perp or is_all:
+            perp_data = await self._info.get_perp_meta_ctx()
+
+        for coin, asset in self.coin_assets.items():
+            if asset < 10_000 and (is_perp or is_all):  # perp or all
+                prices[coin] = float(perp_data[1][asset]["markPx"])
+            if asset >= 10_000 and (is_spot or is_all):  # spot or all
+                asset -= 10_000
+                prices[coin] = float(spot_data[1][asset]["markPx"])
+        return prices
 
     async def get_account_state(self, address: str = None) -> AccountState:
         if not address:
