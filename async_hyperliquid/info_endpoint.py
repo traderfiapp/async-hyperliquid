@@ -122,6 +122,10 @@ class InfoAPI(AsyncAPI):
         payloads = {"type": "delegations", "user": address}
         return await self.post(payloads)
 
+    async def get_user_portfolio(self, address: str) -> List[Any]:
+        payloads = {"type": "portfolio", "user": address}
+        return await self.post(payloads)
+
     async def get_user_staking_summary(self, address: str) -> Dict[str, Any]:
         payloads = {"type": "delegatorSummary", "user": address}
         return await self.post(payloads)

@@ -182,6 +182,12 @@ class AsyncHyper(AsyncAPI):
 
         return {"perp": perp, "spot": spot}
 
+    async def get_account_portfolio(self, address: str = None) -> List[Any]:
+        if not address:
+            address = self.address
+
+        return await self._info.get_user_portfolio(address)
+
     async def update_leverage(
         self, leverage: int, coin: str, is_cross: bool = True
     ):
