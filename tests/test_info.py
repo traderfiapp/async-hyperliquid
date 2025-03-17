@@ -25,6 +25,8 @@ async def test_metas(async_hyper):
         ("HYPE/USDC", "@107"),
         ("PURR/USDC", "PURR/USDC"),
         ("@142", "@142"),
+        ("UBTC/USDC", "@142"),
+        ("UBTC", "@142"),
         pytest.param(
             "ETH/USDC",
             None,
@@ -75,3 +77,15 @@ async def test_get_all_market_prices(async_hyper):
     prices = await async_hyper.get_all_market_prices()
     assert isinstance(prices, dict)
     assert "@142" in prices
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_abcdefg(async_hyper):
+    coin_names = async_hyper.coin_names
+    for k, v in coin_names.items():
+        asset = await async_hyper.get_coin_asset(k)
+        symbol = await async_hyper.get_coin_symbol(k)
+        coin_name1 = await async_hyper.get_coin_name(k)
+        coin_name2 = await async_hyper.get_coin_name(v)
+        assert coin_name1 == coin_name2
+        print(k, v, asset, symbol, coin_name1, coin_name2)

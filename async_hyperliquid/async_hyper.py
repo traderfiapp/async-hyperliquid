@@ -55,13 +55,21 @@ class AsyncHyper(AsyncAPI):
             base, quote = asset_info["tokens"]
             base_info = self.metas["spots"]["tokens"][base]
             quote_info = self.metas["spots"]["tokens"][quote]
-            base_name = (
-                base_info["name"] if base_info["name"] != "UBTC" else "BTC"
-            )
+            base_name = base_info["name"]
+            if base_name not in self.coin_names:
+                self.coin_names[base_name] = asset_info["name"]
+
             quote_name = quote_info["name"]
             name = f"{base_name}/{quote_name}"
             if name not in self.coin_names:
                 self.coin_names[name] = asset_info["name"]
+
+            # Specific for UBTC
+            ubtc_name = f"BTC/{quote_name}"
+            if base_name == "UBTC" and ubtc_name not in self.coin_names:
+                self.coin_names[ubtc_name] = asset_info["name"]
+
+        # USDC is the stable coin, it's a measure of value, always $1
 
     def _init_asset_sz_decimals(self):
         self.asset_sz_decimals = {}
