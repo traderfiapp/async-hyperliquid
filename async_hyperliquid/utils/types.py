@@ -109,25 +109,81 @@ class Endpoint(str, Enum):
     EXCHANGE = "exchange"
 
 
-class Order(TypedDict):
-    # TODO: add order type
-    pass
-
-
-class FilledOrder(Order):
-    # TODO: add filled order type
-    pass
-
-
 class RateLimit(TypedDict):
     cumVlm: str
     nRequestsUsed: int
     nRequestsCap: int
 
 
-class OrderStatus(TypedDict):
-    # TODO: add order status
-    pass
+class Order(TypedDict):
+    coin: str
+    limitPx: str
+    oid: int
+    side: Literal["A", "B"]  # A: ask/sell/short, B: bid/buy/long
+    sz: str
+    timestamp: int
+
+
+class FrontendOrder(Order):
+    isPositionTpsl: bool
+    orderType: str  # Maybe Literal["Limit", "Trigger"] is more accurate
+    origSz: str
+    reduceOnly: bool
+    isTrigger: bool
+    triggerCondition: str
+    triggerPx: str
+
+
+class FilledOrder(TypedDict):
+    coin: str
+    sz: str
+    px: str
+    side: Literal["A", "B"]
+    time: int
+    startPosition: str
+    dir: str
+    closedPnl: str
+    hash: str
+    oid: int
+    crossed: bool
+    fee: str
+    tid: int
+    feeToken: str
+    builderFee: NotRequired[str]
+
+
+class OrderStatus(str, Enum):
+    OPEN = "open"
+    FILLED = "filled"
+    CANCELED = "canceled"
+    TRIGGERED = "triggered"
+    REJECTED = "rejected"
+    MARGIN_CANCELED = "marginCanceled"
+    VAULT_WITHDRAWAL_CANCELED = "vaultWithdrawalCanceled"
+    OPEN_INSTEREST_CAP_CANCELED = "openInterestCapCanceled"
+    SELF_TRADE_CANCELED = "selfTradeCanceled"
+    REDUCE_ONLY_CANCELED = "reduceOnlyCanceled"
+    SIBLING_FILLED_CANCELED = "siblingFilledCanceled"
+    DELISTED_CANCELED = "delistedCanceled"
+    LIQUIDATED_CANCELED = "liquidatedCanceled"
+    SCHEDULED_CANCELED = "scheduledCanceled"
+
+
+class FilledOrderWithStatus(FrontendOrder):
+    tif: str
+    cloid: Optional[str]
+    children: List[Any]
+
+
+class InnerOrderWithStatus(TypedDict):
+    order: FilledOrderWithStatus
+    status: OrderStatus
+    statusTimestamp: int
+
+
+class OrderWithStatus(TypedDict):
+    status: Literal["order", "unknowOid"]
+    order: NotRequired[InnerOrderWithStatus]
 
 
 class L2Book(TypedDict):

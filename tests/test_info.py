@@ -2,6 +2,8 @@ from typing import Any, Dict
 
 import pytest
 
+from async_hyperliquid.utils.types import OrderWithStatus
+
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_metas(async_hyper):
@@ -80,7 +82,7 @@ async def test_get_all_market_prices(async_hyper):
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_abcdefg(async_hyper):
+async def test_coin_utils(async_hyper):
     coin_names = async_hyper.coin_names
     for k, v in coin_names.items():
         asset = await async_hyper.get_coin_asset(k)
@@ -89,3 +91,35 @@ async def test_abcdefg(async_hyper):
         coin_name2 = await async_hyper.get_coin_name(v)
         assert coin_name1 == coin_name2
         print(k, v, asset, symbol, coin_name1, coin_name2)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_order_status(async_hyper):
+    order_id = 80489878412
+    order: OrderWithStatus = await async_hyper.get_order_status(order_id)
+    expected = {
+        "status": "order",
+        "order": {
+            "order": {
+                "coin": "SOL",
+                "side": "B",
+                "limitPx": "125.51",
+                "sz": "0.0",
+                "oid": 80489878412,
+                "timestamp": 1742278993933,
+                "triggerCondition": "N/A",
+                "isTrigger": False,
+                "triggerPx": "0.0",
+                "children": [],
+                "isPositionTpsl": False,
+                "reduceOnly": False,
+                "orderType": "Limit",
+                "origSz": "1.78",
+                "tif": "Ioc",
+                "cloid": None,
+            },
+            "status": "filled",
+            "statusTimestamp": 1742278993933,
+        },
+    }
+    assert order == expected

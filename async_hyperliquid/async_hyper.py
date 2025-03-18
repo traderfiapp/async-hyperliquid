@@ -8,6 +8,7 @@ from async_hyperliquid.utils.types import (
     Cloid,
     Position,
     LimitOrder,
+    OrderStatus,
     AccountState,
     EncodedOrder,
     OrderBuilder,
@@ -35,7 +36,7 @@ class AsyncHyper(AsyncAPI):
         # TODO: figure out the vault address
         self.vault: Optional[str] = None
 
-    def _init_coin_assets(self):
+    def _init_coin_assets(self) -> None:
         self.coin_assets = {}
         for asset, asset_info in enumerate(self.metas["perps"]["universe"]):
             self.coin_assets[asset_info["name"]] = asset
@@ -44,7 +45,7 @@ class AsyncHyper(AsyncAPI):
             asset = asset_info["index"] + 10_000
             self.coin_assets[asset_info["name"]] = asset
 
-    def _init_coin_names(self):
+    def _init_coin_names(self) -> None:
         self.coin_names = {}
         for asset_info in self.metas["perps"]["universe"]:
             self.coin_names[asset_info["name"]] = asset_info["name"]
@@ -71,7 +72,7 @@ class AsyncHyper(AsyncAPI):
 
         # USDC is the stable coin, it's a measure of value, always $1
 
-    def _init_asset_sz_decimals(self):
+    def _init_asset_sz_decimals(self) -> None:
         self.asset_sz_decimals = {}
         for asset, asset_info in enumerate(self.metas["perps"]["universe"]):
             self.asset_sz_decimals[asset] = asset_info["szDecimals"]
@@ -195,6 +196,13 @@ class AsyncHyper(AsyncAPI):
             address = self.address
 
         return await self._info.get_user_portfolio(address)
+
+    async def get_order_status(
+        self, order_id: int, address: str = None
+    ) -> OrderStatus:
+        if not address:
+            address = self.address
+        return await self._info.get_order_status(order_id, address)
 
     async def update_leverage(
         self, leverage: int, coin: str, is_cross: bool = True

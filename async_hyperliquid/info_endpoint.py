@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 from aiohttp import ClientSession
 
@@ -10,9 +10,10 @@ from async_hyperliquid.utils.types import (
     RateLimit,
     FilledOrder,
     FundingRate,
-    OrderStatus,
     UserFunding,
     TokenDetails,
+    FrontendOrder,
+    OrderWithStatus,
     SpotDeployState,
     PerpMetaResponse,
     SpotMetaResponse,
@@ -33,7 +34,7 @@ class InfoAPI(AsyncAPI):
 
     async def get_user_open_orders(
         self, address: str, is_frontend: bool = False
-    ) -> List[Order]:
+    ) -> List[Union[Order, FrontendOrder]]:
         payloads = {
             "type": "frontendOpenOrders" if is_frontend else "openOrders",
             "user": address,
@@ -43,9 +44,10 @@ class InfoAPI(AsyncAPI):
     async def get_user_fills(
         self,
         address: str,
+        aggregated: bool = False,
+        *,
         start_time: int = None,
         end_time: int = None,
-        aggregated: bool = False,
     ) -> List[FilledOrder]:
         payloads = {
             "type": "userFillsByTime" if start_time else "userFills",
@@ -63,7 +65,7 @@ class InfoAPI(AsyncAPI):
 
     async def get_order_status(
         self, order_id: str, address: str
-    ) -> OrderStatus:
+    ) -> OrderWithStatus:
         payloads = {"type": "orderStatus", "user": address, "oid": order_id}
         return await self.post(payloads)
 
