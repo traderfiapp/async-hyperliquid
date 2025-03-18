@@ -8,10 +8,10 @@ from async_hyperliquid.utils.types import (
     Cloid,
     Position,
     LimitOrder,
-    OrderStatus,
     AccountState,
     EncodedOrder,
     OrderBuilder,
+    OrderWithStatus,
     PlaceOrderRequest,
     CancelOrderRequest,
 )
@@ -199,7 +199,7 @@ class AsyncHyper(AsyncAPI):
 
     async def get_order_status(
         self, order_id: int, address: str = None
-    ) -> OrderStatus:
+    ) -> OrderWithStatus:
         if not address:
             address = self.address
         return await self._info.get_order_status(order_id, address)
