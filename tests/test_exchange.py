@@ -45,7 +45,7 @@ async def test_perp_order(async_hyper):
     buy_price = 10_000.0
     buy_sz = buy_value / buy_price
     order_req = {
-        "coin": "BTC",
+        "coin": coin,
         "is_buy": True,
         "sz": buy_sz,
         "px": buy_price,

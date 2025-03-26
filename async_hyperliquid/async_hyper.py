@@ -4,16 +4,21 @@ from aiohttp import ClientSession, ClientTimeout
 from eth_account import Account
 
 from async_hyperliquid.async_api import AsyncAPI
+from async_hyperliquid.utils.miscs import get_timestamp_ms
 from async_hyperliquid.utils.types import (
     Cloid,
     Position,
     LimitOrder,
+    UserDeposit,
     AccountState,
     EncodedOrder,
     OrderBuilder,
+    UserTransfer,
+    UserWithdraw,
     OrderWithStatus,
     PlaceOrderRequest,
     CancelOrderRequest,
+    UserNonFundingDelta,
 )
 from async_hyperliquid.info_endpoint import InfoAPI
 from async_hyperliquid.utils.signing import encode_order, orders_to_action
@@ -196,6 +201,45 @@ class AsyncHyper(AsyncAPI):
             address = self.address
 
         return await self._info.get_user_portfolio(address)
+
+    async def get_latest_ledgers(
+        self,
+        ledger_type: str = "deposit",
+        address: str = None,
+        start_time: int = None,
+        end_time: int = None,
+    ) -> List[UserNonFundingDelta]:
+        if not start_time:
+            now = get_timestamp_ms()
+            one_hour = 60 * 60 * 1000  # one hour in millis
+            start_time = now - one_hour
+        if not address:
+            address = self.address
+        data = await self._info.get_user_funding(
+            address, start_time, end_time=end_time, is_funding=False
+        )
+        return [d for d in data if d["delta"]["type"] == ledger_type]
+
+    async def get_latest_deposits(
+        self, address: str = None, start_time: int = None, end_time: int = None
+    ) -> List[UserDeposit]:
+        return await self.get_latest_ledgers(
+            "deposit", address, start_time, end_time
+        )
+
+    async def get_latest_withdraws(
+        self, address: str = None, start_time: int = None, end_time: int = None
+    ) -> List[UserWithdraw]:
+        return await self.get_latest_ledgers(
+            "withdraw", address, start_time, end_time
+        )
+
+    async def get_latest_transfers(
+        self, address: str = None, start_time: int = None, end_time: int = None
+    ) -> List[UserTransfer]:
+        return await self.get_latest_ledgers(
+            "accountClassTransfer", address, start_time, end_time
+        )
 
     async def get_order_status(
         self, order_id: int, address: str = None

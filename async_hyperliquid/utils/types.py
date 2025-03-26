@@ -279,8 +279,48 @@ class UserFundingDelta(TypedDict):
     usdc: str
 
 
+class UserWithdraw(TypedDict):
+    type: Literal["withdraw"]
+    usdc: str
+    nonce: int
+    fee: str
+
+
+class UserDeposit(TypedDict):
+    type: Literal["deposit"]
+    usdc: str
+
+
+class UserTransfer(TypedDict):
+    type: Literal["accountClassTransfer"]
+    usdc: str
+    toPerp: bool
+
+
+class UserVaultDeposit(TypedDict):
+    type: Literal["vaultDeposit"]
+    vault: str
+    usdc: str
+
+
+class UserVaultWithdraw(TypedDict):
+    type: Literal["vaultWithdraw"]
+    vault: str
+    user: str
+    requestedUsd: str
+    commission: str
+    closingCost: str
+    basis: str
+    netWithdrawnUsd: str
+
+
+UserNonFundingDelta = Union[
+    UserDeposit, UserWithdraw, UserTransfer, UserVaultDeposit, UserVaultWithdraw
+]
+
+
 class UserFunding(TypedDict):
-    delta: UserFundingDelta
+    delta: Union[UserFundingDelta, UserNonFundingDelta]
     hash: str
     time: int
 

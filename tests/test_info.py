@@ -1,3 +1,4 @@
+import time
 from typing import Any, Dict
 
 import pytest
@@ -123,3 +124,10 @@ async def test_get_order_status(async_hyper):
         },
     }
     assert order == expected
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_user_deposits(async_hyper):
+    start = int((time.time() - 30 * 24 * 3600) * 1000)
+    data = await async_hyper.get_latest_deposits(start_time=start)
+    assert isinstance(data, list)
