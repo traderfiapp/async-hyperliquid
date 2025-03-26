@@ -9,12 +9,10 @@ from async_hyperliquid.utils.types import (
     Cloid,
     Position,
     LimitOrder,
-    UserDeposit,
+    UserFunding,
     AccountState,
     EncodedOrder,
     OrderBuilder,
-    UserTransfer,
-    UserWithdraw,
     OrderWithStatus,
     PlaceOrderRequest,
     CancelOrderRequest,
@@ -222,21 +220,21 @@ class AsyncHyper(AsyncAPI):
 
     async def get_latest_deposits(
         self, address: str = None, start_time: int = None, end_time: int = None
-    ) -> List[UserDeposit]:
+    ) -> List[UserFunding]:
         return await self.get_latest_ledgers(
             "deposit", address, start_time, end_time
         )
 
     async def get_latest_withdraws(
         self, address: str = None, start_time: int = None, end_time: int = None
-    ) -> List[UserWithdraw]:
+    ) -> List[UserFunding]:
         return await self.get_latest_ledgers(
             "withdraw", address, start_time, end_time
         )
 
     async def get_latest_transfers(
         self, address: str = None, start_time: int = None, end_time: int = None
-    ) -> List[UserTransfer]:
+    ) -> List[UserFunding]:
         return await self.get_latest_ledgers(
             "accountClassTransfer", address, start_time, end_time
         )
