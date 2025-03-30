@@ -16,7 +16,9 @@ from async_hyperliquid.utils.types import (
     OrderWithStatus,
     PlaceOrderRequest,
     CancelOrderRequest,
+    ClearinghouseState,
     UserNonFundingDelta,
+    SpotClearinghouseState,
 )
 from async_hyperliquid.info_endpoint import InfoAPI
 from async_hyperliquid.utils.signing import encode_order, orders_to_action
@@ -185,12 +187,27 @@ class AsyncHyper(AsyncAPI):
                 prices[coin] = float(spot_data[1][asset]["markPx"])
         return prices
 
+    async def get_perp_account_state(
+        self, address: str = None
+    ) -> ClearinghouseState:
+        if not address:
+            address = self.address
+
+        return await self._info.get_perp_clearinghouse_state(address)
+
+    async def get_spot_account_state(
+        self, address: str = None
+    ) -> SpotClearinghouseState:
+        if not address:
+            address = self.address
+        return await self._info.get_spot_clearinghouse_state(address)
+
     async def get_account_state(self, address: str = None) -> AccountState:
         if not address:
             address = self.address
 
-        perp = await self._info.get_perp_clearinghouse_state(address)
-        spot = await self._info.get_spot_clearinghouse_state(address)
+        perp = await self.get_perp_account_state(address)
+        spot = await self.get_spot_account_state(address)
 
         return {"perp": perp, "spot": spot}
 
