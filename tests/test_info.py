@@ -2,7 +2,6 @@ import time
 from typing import Any, Dict
 
 import pytest
-import json
 
 from async_hyperliquid.utils.types import OrderWithStatus
 
@@ -85,28 +84,14 @@ async def test_get_all_market_prices(async_hyper):
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_coin_utils(async_hyper):
-    # coin_names = async_hyper.coin_names
-    # for k, v in coin_names.items():
-    #     asset = await async_hyper.get_coin_asset(k)
-    #     symbol = await async_hyper.get_coin_symbol(k)
-    #     coin_name1 = await async_hyper.get_coin_name(k)
-    #     coin_name2 = await async_hyper.get_coin_name(v)
-    #     assert coin_name1 == coin_name2
-    #     print(k, v, asset, symbol, coin_name1, coin_name2)
     coin_names = async_hyper.coin_names
-    info = {}
     for k, v in coin_names.items():
-        if k.startswith("@"):
-            continue
-
-        if k.endswith("/USDC"):
-            continue
-
-        decimals = await async_hyper.get_coin_sz_decimals(k)
-        print(k, decimals)
-        info[k] = decimals
-    # decimals = async_hyper.asset_sz_decimals
-    print(json.dumps(info))
+        asset = await async_hyper.get_coin_asset(k)
+        symbol = await async_hyper.get_coin_symbol(k)
+        coin_name1 = await async_hyper.get_coin_name(k)
+        coin_name2 = await async_hyper.get_coin_name(v)
+        assert coin_name1 == coin_name2
+        print(k, v, asset, symbol, coin_name1, coin_name2)
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -155,3 +140,23 @@ async def test_get_user_positions(async_hyper):
     print(data)
     states = await async_hyper.get_perp_account_state(address)
     print(states)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_usd_class_transfer(async_hyper):
+    # transfer perp to spot
+    usd_amount = 2
+    resp = await async_hyper.usd_class_transfer(usd_amount, to_perp=False)
+    assert resp["status"] == "ok"
+    # transfer spot to perp
+    usd_amount = 1
+    resp = await async_hyper.usd_class_transfer(usd_amount, to_perp=True)
+    assert resp["status"] == "ok"
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_usd_transfer(async_hyper):
+    usd_amount = 5
+    recipient = ""
+    resp = await async_hyper.usd_transfer(usd_amount, recipient)
+    assert resp["status"] == "ok"

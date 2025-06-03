@@ -22,7 +22,12 @@ from async_hyperliquid.utils.types import (
     SpotClearinghouseState,
 )
 from async_hyperliquid.info_endpoint import InfoAPI
-from async_hyperliquid.utils.signing import encode_order, orders_to_action
+from async_hyperliquid.utils.signing import (
+    encode_order,
+    orders_to_action,
+    sign_usd_transfer_action,
+    sign_usd_class_transfer_action,
+)
 from async_hyperliquid.utils.constants import MAINNET_API_URL, TESTNET_API_URL
 from async_hyperliquid.exchange_endpoint import ExchangeAPI
 
@@ -448,6 +453,33 @@ class AsyncHyper(AsyncAPI):
         }
 
         await self.place_order(**close_order)
+
+    async def usd_class_transfer(self, amount: float, to_perp: bool = False):
+        nonce = get_timestamp_ms()
+        str_amount = str(amount)
+        # current not support for vault address
+        action = {
+            "type": "usdClassTransfer",
+            "amount": str_amount,
+            "toPerp": to_perp,
+            "nonce": nonce,
+        }
+        sig = sign_usd_class_transfer_action(
+            self.account, action, self.base_url == MAINNET_API_URL
+        )
+        return await self._exchange.post_action_with_sig(action, sig, nonce)
+
+    async def usd_transfer(self, amount: float, recipient: str):
+        nonce = get_timestamp_ms()
+        action = {
+            "type": "usdSend",
+            "amount": str(amount),
+            "destination": recipient,
+            "time": nonce,
+        }
+        is_mainnet = self.base_url == MAINNET_API_URL
+        sig = sign_usd_transfer_action(self.account, action, is_mainnet)
+        return await self._exchange.post_action_with_sig(action, sig, nonce)
 
     def get_leverage_from_positions(
         self, positions: List[Position]

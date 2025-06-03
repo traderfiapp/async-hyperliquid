@@ -82,5 +82,3 @@ async def test_update_isolated_margin(async_hyper):
         "order_type": LimitOrder.GTC.value,
     }
     res = await async_hyper.place_order(**order_req)
-    # res = await async_hyper.update_isolated_margin(1, "ETH")
-    # print("Isolated margin updated resp:", res)

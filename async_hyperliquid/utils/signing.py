@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, List
 from decimal import Decimal
 
 import msgpack
@@ -14,6 +14,10 @@ from async_hyperliquid.utils.types import (
     OrderBuilder,
     SignedAction,
     PlaceOrderRequest,
+)
+from async_hyperliquid.utils.constants import (
+    USD_SEND_SIGN_TYPES,
+    USD_CLASS_TRANSFER_SIGN_TYPES,
 )
 
 
@@ -31,6 +35,16 @@ def hash_action(action, vault, nonce) -> bytes:
         data += b"\x01"
         data += bytes.fromhex(vault.removeprefix("0x"))
     return keccak(data)
+
+
+def sign_inner(wallet: Account, data: dict) -> SignedAction:
+    encodes = encode_typed_data(full_message=data)
+    signed = wallet.sign_message(encodes)
+    return {
+        "r": to_hex(signed["r"]),
+        "s": to_hex(signed["s"]),
+        "v": signed["v"],
+    }
 
 
 def sign_action(
@@ -64,13 +78,14 @@ def sign_action(
         "primaryType": "Agent",
         "message": msg,
     }
-    encodes = encode_typed_data(full_message=data)
-    signed = wallet.sign_message(encodes)
-    return {
-        "r": to_hex(signed["r"]),
-        "s": to_hex(signed["s"]),
-        "v": signed["v"],
-    }
+    return sign_inner(wallet, data)
+    # encodes = encode_typed_data(full_message=data)
+    # signed = wallet.sign_message(encodes)
+    # return {
+    #     "r": to_hex(signed["r"]),
+    #     "s": to_hex(signed["s"]),
+    #     "v": signed["v"],
+    # }
 
 
 def round_float(x: float) -> str:
@@ -128,3 +143,61 @@ def orders_to_action(
     if builder:
         action["builder"] = builder
     return action
+
+
+def user_signed_payload(primary_type, payload_types, action):
+    chain_id = int(action["signatureChainId"], 16)
+    return {
+        "domain": {
+            "name": "HyperliquidSignTransaction",
+            "version": "1",
+            "chainId": chain_id,
+            "verifyingContract": "0x0000000000000000000000000000000000000000",
+        },
+        "types": {
+            primary_type: payload_types,
+            "EIP712Domain": [
+                {"name": "name", "type": "string"},
+                {"name": "version", "type": "string"},
+                {"name": "chainId", "type": "uint256"},
+                {"name": "verifyingContract", "type": "address"},
+            ],
+        },
+        "primaryType": primary_type,
+        "message": action,
+    }
+
+
+def sign_user_signed_action(
+    wallet: Account,
+    action: dict,
+    payload_types: List[dict],
+    primary_type: str,
+    is_mainnet: bool,
+):
+    action["signatureChainId"] = "0x66eee"
+    action["hyperliquidChain"] = "Mainnet" if is_mainnet else "Testnet"
+    data = user_signed_payload(primary_type, payload_types, action)
+    return sign_inner(wallet, data)
+
+
+def sign_usd_transfer_action(wallet: Account, action, is_mainnet: bool):
+    return sign_user_signed_action(
+        wallet,
+        action,
+        USD_SEND_SIGN_TYPES,
+        "HyperliquidTransaction:UsdSend",
+        is_mainnet,
+    )
+
+
+def sign_usd_class_transfer_action(
+    wallet: Account, action: Any, is_mainnet: bool
+):
+    return sign_user_signed_action(
+        wallet,
+        action,
+        USD_CLASS_TRANSFER_SIGN_TYPES,
+        "HyperliquidTransaction:UsdClassTransfer",
+        is_mainnet,
+    )
