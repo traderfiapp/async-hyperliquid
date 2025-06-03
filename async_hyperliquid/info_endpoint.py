@@ -28,7 +28,7 @@ class InfoAPI(AsyncAPI):
     def __init__(self, base_url: str, session: ClientSession):
         super().__init__(Endpoint.INFO, base_url, session)
 
-    async def get_all_mids(self) -> List[Dict[str, int]]:
+    async def get_all_mids(self) -> Dict[str, int]:
         payloads = {"type": "allMids"}
         return await self.post(payloads)
 
@@ -46,8 +46,8 @@ class InfoAPI(AsyncAPI):
         address: str,
         aggregated: bool = False,
         *,
-        start_time: int = None,
-        end_time: int = None,
+        start_time: int | None = None,
+        end_time: int | None = None,
     ) -> List[FilledOrder]:
         payloads = {
             "type": "userFillsByTime" if start_time else "userFills",
@@ -64,15 +64,15 @@ class InfoAPI(AsyncAPI):
         return await self.post(payloads)
 
     async def get_order_status(
-        self, order_id: str, address: str
+        self, order_id: str | int, address: str
     ) -> OrderWithStatus:
         payloads = {"type": "orderStatus", "user": address, "oid": order_id}
         return await self.post(payloads)
 
     async def get_depth(
-        self, coin: str, level: int = None, mantissa: int = None
+        self, coin: str, level: int | None = None, mantissa: int | None = None
     ) -> List[Depth]:
-        payloads = {"type": "l2Book", "coin": coin}
+        payloads: dict[str, Any] = {"type": "l2Book", "coin": coin}
         if level:
             payloads["nSigFigs"] = level
         if level and level == 5 and mantissa:
@@ -103,7 +103,7 @@ class InfoAPI(AsyncAPI):
         return await self.post(payloads)
 
     async def get_vault_info(
-        self, address: str, user: str = None
+        self, address: str, user: str | None = None
     ) -> Dict[str, Any]:
         payloads = {"type": "vaultDetails", "vaultAddress": address}
         if user:
@@ -162,7 +162,7 @@ class InfoAPI(AsyncAPI):
         self,
         address: str,
         start_time: int,
-        end_time: int = None,
+        end_time: int | None = None,
         is_funding: bool = True,
     ) -> List[UserFunding]:
         payloads = {
@@ -176,7 +176,7 @@ class InfoAPI(AsyncAPI):
         return await self.post(payloads)
 
     async def get_funding_rate(
-        self, coin: str, start_time: int, end_time: int = None
+        self, coin: str, start_time: int, end_time: int | None = None
     ) -> List[FundingRate]:
         payloads = {
             "type": "fundingHistory",

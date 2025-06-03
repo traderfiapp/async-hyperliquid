@@ -2,17 +2,18 @@ from typing import List
 from decimal import Decimal
 
 import msgpack
-from eth_utils import keccak, to_hex
 from eth_account import Account
+from eth_utils.crypto import keccak
 from eth_account.messages import encode_typed_data
+from eth_utils.conversions import to_hex
 
 from async_hyperliquid.utils.types import (
     OrderType,
     OrderAction,
     EncodedOrder,
     OrderBuilder,
-    PlaceOrderRequest,
     SignedAction,
+    PlaceOrderRequest,
 )
 
 
@@ -35,7 +36,7 @@ def hash_action(action, vault, nonce) -> bytes:
 def sign_action(
     wallet: Account,
     action: dict,
-    active_pool: str,
+    active_pool: str | None,
     nonce: int,
     is_mainnet: bool,
 ) -> SignedAction:
@@ -90,7 +91,9 @@ def ensure_order_type(order_type: OrderType) -> OrderType:
         return {
             "trigger": {
                 "isMarket": order_type["trigger"]["isMarket"],
-                "triggerPx": round_float(order_type["trigger"]["triggerPx"]),
+                "triggerPx": round_float(
+                    float(order_type["trigger"]["triggerPx"])
+                ),
                 "tpsl": order_type["trigger"]["tpsl"],
             }
         }
@@ -108,14 +111,14 @@ def encode_order(order: PlaceOrderRequest, asset: int) -> EncodedOrder:
         "t": ensure_order_type(order["order_type"]),
     }
 
-    if order["cloid"] is not None:
-        encoded_order["c"] = order["cloid"].to_raw()
+    if order["cloid"] is not None:  # type: ignore
+        encoded_order["c"] = order["cloid"].to_raw()  # type: ignore
 
     return encoded_order
 
 
 def orders_to_action(
-    encoded_orders: List[EncodedOrder], builder: OrderBuilder = None
+    encoded_orders: List[EncodedOrder], builder: OrderBuilder | None = None
 ) -> OrderAction:
     action: OrderAction = {
         "type": "order",

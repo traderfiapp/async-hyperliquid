@@ -1,16 +1,20 @@
 import logging
 from types import TracebackType
-from typing import Optional
+from typing import Any, Optional
 from traceback import TracebackException
 
 from aiohttp import ClientSession
 
+from async_hyperliquid.utils.types import Endpoint
 from async_hyperliquid.utils.constants import MAINNET_API_URL
 
 
 class AsyncAPI:
     def __init__(
-        self, endpoint: str, base_url: str = None, session: ClientSession = None
+        self,
+        endpoint: Endpoint,
+        base_url: str | None = None,
+        session: ClientSession = None,  # type: ignore
     ):
         self.endpoint = endpoint
         self.base_url = base_url or MAINNET_API_URL
@@ -33,7 +37,7 @@ class AsyncAPI:
         if self.session and not self.session.closed:
             await self.session.close()
 
-    async def post(self, payloads: Optional[dict] = None) -> dict:
+    async def post(self, payloads: Optional[dict] = None) -> Any:
         payloads = payloads or {}
         req_path = f"{self.base_url}/{self.endpoint.value}"
         self.logger.debug(f"POST {req_path} {payloads}")

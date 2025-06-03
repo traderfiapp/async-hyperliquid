@@ -63,3 +63,24 @@ async def test_perp_order(async_hyper):
     resp = await async_hyper.cancel_order(coin, oid)
     assert resp["status"] == "ok"
     assert resp["response"]["data"]["statuses"][0] == "success"
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_update_isolated_margin(async_hyper):
+    res = await async_hyper.update_leverage(2, "ETH", is_cross=False)
+    print("Isolated leverage updated resp:", res)
+
+    value = 10 + 0.3
+    price = 2670.0
+    size = value / price
+    order_req = {
+        "coin": "ETH",
+        "is_buy": True,
+        "sz": round(size, 4),
+        "px": price,
+        "is_market": False,
+        "order_type": LimitOrder.GTC.value,
+    }
+    res = await async_hyper.place_order(**order_req)
+    # res = await async_hyper.update_isolated_margin(1, "ETH")
+    # print("Isolated margin updated resp:", res)

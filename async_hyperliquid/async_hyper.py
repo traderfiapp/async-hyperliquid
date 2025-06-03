@@ -1,3 +1,4 @@
+import math
 from typing import Any, Dict, List, Literal, Optional
 
 from aiohttp import ClientSession, ClientTimeout
@@ -37,7 +38,7 @@ class AsyncHyper(AsyncAPI):
         self._exchange = ExchangeAPI(
             self.account, self.session, self.base_url, address=self.address
         )
-        self.metas: Optional[Dict[str, Any]] = None
+        self.metas: Dict[str, Any] = {}
         # TODO: figure out the vault address
         self.vault: Optional[str] = None
 
@@ -149,7 +150,7 @@ class AsyncHyper(AsyncAPI):
 
         return self.asset_sz_decimals[asset]
 
-    async def get_token_id(self, coin: str) -> str:
+    async def get_token_id(self, coin: str) -> str | None:
         coin_name = await self.get_coin_name(coin)
         spot_metas: Dict[str, Any] = self.metas["spots"]
         for coin_info in spot_metas["universe"]:
@@ -188,7 +189,7 @@ class AsyncHyper(AsyncAPI):
         return prices
 
     async def get_perp_account_state(
-        self, address: str = None
+        self, address: str | None = None
     ) -> ClearinghouseState:
         if not address:
             address = self.address
@@ -196,13 +197,15 @@ class AsyncHyper(AsyncAPI):
         return await self._info.get_perp_clearinghouse_state(address)
 
     async def get_spot_account_state(
-        self, address: str = None
+        self, address: str | None = None
     ) -> SpotClearinghouseState:
         if not address:
             address = self.address
         return await self._info.get_spot_clearinghouse_state(address)
 
-    async def get_account_state(self, address: str = None) -> AccountState:
+    async def get_account_state(
+        self, address: str | None = None
+    ) -> AccountState:
         if not address:
             address = self.address
 
@@ -211,7 +214,9 @@ class AsyncHyper(AsyncAPI):
 
         return {"perp": perp, "spot": spot}
 
-    async def get_account_portfolio(self, address: str = None) -> List[Any]:
+    async def get_account_portfolio(
+        self, address: str | None = None
+    ) -> List[Any]:
         if not address:
             address = self.address
 
@@ -220,9 +225,9 @@ class AsyncHyper(AsyncAPI):
     async def get_latest_ledgers(
         self,
         ledger_type: str = "deposit",
-        address: str = None,
-        start_time: int = None,
-        end_time: int = None,
+        address: str | None = None,
+        start_time: int | None = None,
+        end_time: int | None = None,
     ) -> List[UserNonFundingDelta]:
         if not start_time:
             now = get_timestamp_ms()
@@ -233,31 +238,40 @@ class AsyncHyper(AsyncAPI):
         data = await self._info.get_user_funding(
             address, start_time, end_time=end_time, is_funding=False
         )
-        return [d for d in data if d["delta"]["type"] == ledger_type]
+        return [d for d in data if d["delta"]["type"] == ledger_type]  # type: ignore
 
     async def get_latest_deposits(
-        self, address: str = None, start_time: int = None, end_time: int = None
+        self,
+        address: str | None = None,
+        start_time: int | None = None,
+        end_time: int | None = None,
     ) -> List[UserFunding]:
         return await self.get_latest_ledgers(
             "deposit", address, start_time, end_time
-        )
+        )  # type: ignore
 
     async def get_latest_withdraws(
-        self, address: str = None, start_time: int = None, end_time: int = None
+        self,
+        address: str | None = None,
+        start_time: int | None = None,
+        end_time: int | None = None,
     ) -> List[UserFunding]:
         return await self.get_latest_ledgers(
             "withdraw", address, start_time, end_time
-        )
+        )  # type: ignore
 
     async def get_latest_transfers(
-        self, address: str = None, start_time: int = None, end_time: int = None
+        self,
+        address: str | None = None,
+        start_time: int | None = None,
+        end_time: int | None = None,
     ) -> List[UserFunding]:
         return await self.get_latest_ledgers(
             "accountClassTransfer", address, start_time, end_time
-        )
+        )  # type: ignore
 
     async def get_order_status(
-        self, order_id: int, address: str = None
+        self, order_id: int, address: str | None = None
     ) -> OrderWithStatus:
         if not address:
             address = self.address
@@ -271,6 +285,22 @@ class AsyncHyper(AsyncAPI):
             "asset": await self.get_coin_asset(coin),
             "isCross": is_cross,
             "leverage": leverage,
+        }
+
+        return await self._exchange.post_action(action)
+
+    async def update_isolated_margin(self, usd: float, coin: str):
+        usd_in_units = usd * 10**6
+        if abs(round(usd_in_units) - usd_in_units) >= 1e-3:
+            raise ValueError(
+                f"USD amount precision error: Value {usd} cannot be accurately"
+            )
+        amount = math.floor(usd_in_units)
+        action = {
+            "type": "updateIsolatedMargin",
+            "asset": await self.get_coin_asset(coin),
+            "isBuy": True,
+            "ntli": amount,
         }
 
         return await self._exchange.post_action(action)
@@ -344,14 +374,14 @@ class AsyncHyper(AsyncAPI):
         if cloid:
             order_req["cloid"] = cloid
 
-        return await self.place_orders([order_req], builder=builder)
+        return await self.place_orders([order_req], builder=builder)  # type: ignore
 
     async def cancel_order(self, coin: str, oid: int | str):
         name = await self.get_coin_name(coin)
         if not isinstance(oid, int):
             oid = int(oid)
         cancel_req = {"coin": name, "oid": oid}
-        return await self.cancel_orders([cancel_req])
+        return await self.cancel_orders([cancel_req])  # type: ignore
 
     async def cancel_orders(self, orders: List[CancelOrderRequest]):
         # TODO: support cloid
@@ -376,7 +406,9 @@ class AsyncHyper(AsyncAPI):
         action = {"type": "setReferrer", "code": code}
         return await self._exchange.post_action(action)
 
-    async def get_all_positions(self, address: str = None) -> List[Position]:
+    async def get_all_positions(
+        self, address: str | None = None
+    ) -> List[Position]:
         if not address:
             address = self.address
 

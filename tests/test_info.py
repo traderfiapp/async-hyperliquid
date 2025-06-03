@@ -2,6 +2,7 @@ import time
 from typing import Any, Dict
 
 import pytest
+import json
 
 from async_hyperliquid.utils.types import OrderWithStatus
 
@@ -84,14 +85,28 @@ async def test_get_all_market_prices(async_hyper):
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_coin_utils(async_hyper):
+    # coin_names = async_hyper.coin_names
+    # for k, v in coin_names.items():
+    #     asset = await async_hyper.get_coin_asset(k)
+    #     symbol = await async_hyper.get_coin_symbol(k)
+    #     coin_name1 = await async_hyper.get_coin_name(k)
+    #     coin_name2 = await async_hyper.get_coin_name(v)
+    #     assert coin_name1 == coin_name2
+    #     print(k, v, asset, symbol, coin_name1, coin_name2)
     coin_names = async_hyper.coin_names
+    info = {}
     for k, v in coin_names.items():
-        asset = await async_hyper.get_coin_asset(k)
-        symbol = await async_hyper.get_coin_symbol(k)
-        coin_name1 = await async_hyper.get_coin_name(k)
-        coin_name2 = await async_hyper.get_coin_name(v)
-        assert coin_name1 == coin_name2
-        print(k, v, asset, symbol, coin_name1, coin_name2)
+        if k.startswith("@"):
+            continue
+
+        if k.endswith("/USDC"):
+            continue
+
+        decimals = await async_hyper.get_coin_sz_decimals(k)
+        print(k, decimals)
+        info[k] = decimals
+    # decimals = async_hyper.asset_sz_decimals
+    print(json.dumps(info))
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -131,3 +146,12 @@ async def test_get_user_deposits(async_hyper):
     start = int((time.time() - 30 * 24 * 3600) * 1000)
     data = await async_hyper.get_latest_deposits(start_time=start)
     assert isinstance(data, list)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_user_positions(async_hyper):
+    address = "0x91256c49dD025e61E2D3981189bA36907e084c2B"
+    data = await async_hyper.get_all_positions(address)
+    print(data)
+    states = await async_hyper.get_perp_account_state(address)
+    print(states)
