@@ -32,18 +32,10 @@ class ExchangeAPI(AsyncAPI):
             self.account, action, None, nonce, self.base_url == MAINNET_API_URL
         )
         return await self.post_action_with_sig(action, signature, nonce)
-        # vault_address = vault if action["type"] != "usdClassTransfer" else None
-        # payloads = {
-        #     "action": action,
-        #     "nonce": nonce,
-        #     "signature": signature,
-        #     "vaultAddress": vault_address,
-        # }
-        # return await self.post(payloads)
 
     async def post_action_with_sig(
         self, action: Any, sig: Any, nonce: int
-    ) -> None:
+    ) -> Any:
         # current not support vault address, default to None
         payloads = {
             "action": action,

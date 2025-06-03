@@ -79,13 +79,6 @@ def sign_action(
         "message": msg,
     }
     return sign_inner(wallet, data)
-    # encodes = encode_typed_data(full_message=data)
-    # signed = wallet.sign_message(encodes)
-    # return {
-    #     "r": to_hex(signed["r"]),
-    #     "s": to_hex(signed["s"]),
-    #     "v": signed["v"],
-    # }
 
 
 def round_float(x: float) -> str:
