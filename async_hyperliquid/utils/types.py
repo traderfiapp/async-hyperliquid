@@ -264,7 +264,7 @@ class MarginSummary(TypedDict):
 
 class ClearinghouseState(TypedDict):
     assetPositions: List[AssetPosition]
-    crosssMaintenanceMarginUsed: str
+    crossMaintenanceMarginUsed: str
     crossMarginSummary: MarginSummary
     marginSummary: MarginSummary
     time: int
