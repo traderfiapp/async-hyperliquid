@@ -12,12 +12,13 @@ load_dotenv(env_file)
 
 
 @pytest_asyncio.fixture(loop_scope="session")
-async def async_hyper() -> AsyncGenerator[AsyncHyper, None]:
-    address = os.getenv("HYPER_ADDRESS")
-    api_key = os.getenv("HYPER_API_KEY")
-    hyper = AsyncHyper(address, api_key)
+async def hl() -> AsyncGenerator[AsyncHyper, None]:
+    address = os.getenv("HL_ADDR", "")
+    api_key = os.getenv("HL_AK", "")
+    is_mainnet = os.getenv("IS_MAINNET", "true").lower() == "true"
+    hl = AsyncHyper(address, api_key, is_mainnet)
     try:
-        await hyper.init_metas()
-        yield hyper
+        await hl.init_metas()
+        yield hl
     finally:
-        await hyper.close()
+        await hl.close()
