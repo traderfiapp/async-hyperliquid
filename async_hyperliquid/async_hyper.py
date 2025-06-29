@@ -290,6 +290,13 @@ class AsyncHyper(AsyncAPI):
             "accountClassTransfer", address, start_time, end_time
         )  # type: ignore
 
+    async def get_user_open_orders(
+        self, address: str | None = None, is_frontend: bool = False
+    ):
+        if not address:
+            address = self.address
+        return await self._info.get_user_open_orders(address, is_frontend)
+
     async def get_order_status(
         self, order_id: int, address: str | None = None
     ) -> OrderWithStatus:
@@ -499,7 +506,7 @@ class AsyncHyper(AsyncAPI):
         positions = [p["position"] for p in resp["assetPositions"]]
         return positions
 
-    async def close_all_positions(self) -> None:
+    async def close_all_positions(self):
         positions = await self.get_all_positions()
         if not positions:
             raise ValueError(f"User({self.address}) has no positions.")
@@ -518,7 +525,7 @@ class AsyncHyper(AsyncAPI):
 
         return await self.batch_place_orders(orders, is_market=True)
 
-    async def close_position(self, coin: str) -> None:
+    async def close_position(self, coin: str):
         positions = await self.get_all_positions()
         target = {}
         for position in positions:

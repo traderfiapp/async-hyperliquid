@@ -90,8 +90,8 @@ async def test_batch_place_orders(hl: AsyncHyper):
     is_buy = True
     sz = 0.001
     px = 105_000
-    tp_px = px + 3_000
-    sl_px = px - 2_000
+    tp_px = px + 5_000
+    sl_px = px - 5_000
     o1 = {
         "coin": coin,
         "is_buy": is_buy,
@@ -124,9 +124,30 @@ async def test_batch_place_orders(hl: AsyncHyper):
         "reduce_only": True,
         "order_type": sl_order_type,
     }
+
+    resp = await hl.batch_place_orders([o1], is_market=True)  # type: ignore
+    print("\nBatch place market orders response: ", resp)
+    assert resp["status"] == "ok"
+
+    orders = [o2, o3]
+    resp = await hl.batch_place_orders(orders, grouping="positionTpsl")  # type: ignore
+    print("Batch place orders with 'positionTpsl' response: ", resp)
+    assert resp["status"] == "ok"
+
+    resp = await hl.close_all_positions()
+    print("Close all positions response: ", resp)
+    assert resp["status"] == "ok"
+
     orders = [o1, o2, o3]
-    print(hl.is_mainnet)
-    print(hl.account.address)
-    print(hl._exchange.base_url)
     resp = await hl.batch_place_orders(orders, grouping="normalTpsl")  # type: ignore
-    print(resp)
+    print("Batch place orders with 'normalTpsl' response: ", resp)
+
+    orders = await hl.get_user_open_orders()
+    cancels = []
+    for o in orders:
+        coin = o["coin"]
+        oid = o["oid"]
+        cancels.append((coin, oid))
+    resp = await hl.batch_cancel_orders(cancels)
+    print("Batch cancel orders response: ", resp)
+    assert resp["status"] == "ok"
