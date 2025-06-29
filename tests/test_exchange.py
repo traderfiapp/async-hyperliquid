@@ -82,3 +82,51 @@ async def test_update_isolated_margin(hl: AsyncHyper):
         "order_type": LimitOrder.GTC.value,
     }
     res = await hl.place_order(**order_req)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_batch_place_orders(hl: AsyncHyper):
+    coin = "BTC"
+    is_buy = True
+    sz = 0.001
+    px = 105_000
+    tp_px = px + 3_000
+    sl_px = px - 2_000
+    o1 = {
+        "coin": coin,
+        "is_buy": is_buy,
+        "sz": sz,
+        "limit_px": px,
+        "reduce_only": False,
+        "order_type": LimitOrder.ALO.value,
+    }
+    # Take profit
+    tp_order_type = {
+        "trigger": {"isMarket": False, "triggerPx": tp_px, "tpsl": "tp"}
+    }
+    o2 = {
+        "coin": coin,
+        "is_buy": not is_buy,
+        "sz": sz,
+        "limit_px": px,
+        "reduce_only": True,
+        "order_type": tp_order_type,
+    }
+    # Stop loss
+    sl_order_type = {
+        "trigger": {"isMarket": False, "triggerPx": sl_px, "tpsl": "sl"}
+    }
+    o3 = {
+        "coin": coin,
+        "is_buy": not is_buy,
+        "sz": sz,
+        "limit_px": px,
+        "reduce_only": True,
+        "order_type": sl_order_type,
+    }
+    orders = [o1, o2, o3]
+    print(hl.is_mainnet)
+    print(hl.account.address)
+    print(hl._exchange.base_url)
+    resp = await hl.batch_place_orders(orders, grouping="normalTpsl")  # type: ignore
+    print(resp)

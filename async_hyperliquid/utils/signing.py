@@ -120,7 +120,7 @@ def encode_order(order: PlaceOrderRequest, asset: int) -> EncodedOrder:
         "t": ensure_order_type(order["order_type"]),
     }  # type: ignore
 
-    if order["cloid"] is not None:
+    if order.get("cloid", None) is not None:
         encoded_order["c"] = order["cloid"].to_raw()  # type: ignore
 
     return encoded_order

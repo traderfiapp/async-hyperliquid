@@ -477,9 +477,13 @@ class AsyncHyper(AsyncAPI):
             action, vault=self.vault, expires=expires
         )
 
+    async def cancel_orders_by_cloid(self):
+        # TODO: implement cancel orders by cloid
+        raise Exception("Not implement yet.")
+
     async def modify_order(self):
         # TODO: implement modify order
-        pass
+        raise Exception("Not implement yet.")
 
     async def set_referrer_code(self, code: str):
         action = {"type": "setReferrer", "code": code}
@@ -496,10 +500,23 @@ class AsyncHyper(AsyncAPI):
         return positions
 
     async def close_all_positions(self) -> None:
-        # TODO: bundle close all positions into one single requests
         positions = await self.get_all_positions()
-        for position in positions:
-            await self.close_position(position["coin"])
+        if not positions:
+            raise ValueError(f"User({self.address}) has no positions.")
+        orders = []
+        for p in positions:
+            coin = p["coin"]
+            szi = float(p["szi"])
+            order = {
+                "coin": coin,
+                "is_buy": szi < 0,
+                "sz": abs(szi),
+                "px": 0,
+                "reduce_only": True,
+            }
+            orders.append(order)
+
+        return await self.batch_place_orders(orders, is_market=True)
 
     async def close_position(self, coin: str) -> None:
         positions = await self.get_all_positions()
@@ -527,7 +544,7 @@ class AsyncHyper(AsyncAPI):
             "reduce_only": True,
         }
 
-        await self.place_order(**close_order)
+        return await self.place_order(**close_order)
 
     async def usd_class_transfer(self, amount: float, to_perp: bool = False):
         nonce = get_timestamp_ms()
