@@ -96,8 +96,8 @@ async def test_batch_place_orders(hl: AsyncHyper):
         "coin": coin,
         "is_buy": is_buy,
         "sz": sz,
-        "limit_px": px,
-        "reduce_only": False,
+        "px": px,
+        "ro": False,
         "order_type": LimitOrder.ALO.value,
     }
     # Take profit
@@ -108,8 +108,8 @@ async def test_batch_place_orders(hl: AsyncHyper):
         "coin": coin,
         "is_buy": not is_buy,
         "sz": sz,
-        "limit_px": px,
-        "reduce_only": True,
+        "px": px,
+        "ro": True,
         "order_type": tp_order_type,
     }
     # Stop loss
@@ -120,8 +120,8 @@ async def test_batch_place_orders(hl: AsyncHyper):
         "coin": coin,
         "is_buy": not is_buy,
         "sz": sz,
-        "limit_px": px,
-        "reduce_only": True,
+        "px": px,
+        "ro": True,
         "order_type": sl_order_type,
     }
 

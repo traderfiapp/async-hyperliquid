@@ -378,8 +378,8 @@ class AsyncHyper(AsyncAPI):
         px: float,
         is_market: bool = True,
         *,
+        ro: bool = False,
         order_type: OrderType = LimitOrder.IOC.value,  # type: ignore
-        reduce_only: bool = False,
         cloid: Cloid | None = None,
         slippage: float = 0.01,  # Default slippage is 1%
         builder: OrderBuilder | None = None,
@@ -398,9 +398,9 @@ class AsyncHyper(AsyncAPI):
             "coin": coin_name,
             "is_buy": is_buy,
             "sz": sz,
-            "limit_px": px,
+            "px": px,
+            "ro": ro,
             "order_type": order_type,
-            "reduce_only": reduce_only,
             "cloid": cloid,
         }
 
@@ -431,7 +431,7 @@ class AsyncHyper(AsyncAPI):
                 req = {
                     **o,
                     "coin": coin_name,
-                    "limit_px": px,
+                    "px": px,
                     "order_type": order_type,
                 }
                 reqs.append(req)
@@ -519,7 +519,7 @@ class AsyncHyper(AsyncAPI):
                 "is_buy": szi < 0,
                 "sz": abs(szi),
                 "px": 0,
-                "reduce_only": True,
+                "ro": True,
             }
             orders.append(order)
 
@@ -548,7 +548,7 @@ class AsyncHyper(AsyncAPI):
             "sz": abs(size),
             "px": price,
             "is_market": True,
-            "reduce_only": True,
+            "ro": True,
         }
 
         return await self.place_order(**close_order)

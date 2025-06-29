@@ -114,9 +114,9 @@ def encode_order(order: PlaceOrderRequest, asset: int) -> EncodedOrder:
     encoded_order: EncodedOrder = {
         "a": asset,
         "b": order["is_buy"],
-        "p": round_float(order["limit_px"]),
+        "p": round_float(order["px"]),
         "s": round_float(order["sz"]),
-        "r": order["reduce_only"],
+        "r": order["ro"],
         "t": ensure_order_type(order["order_type"]),
     }
 

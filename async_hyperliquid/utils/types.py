@@ -72,8 +72,8 @@ class PlaceOrderRequest(TypedDict):
     coin: str
     is_buy: bool
     sz: float
-    limit_px: float
-    reduce_only: bool
+    px: float
+    ro: bool
     order_type: OrderType
     cloid: Cloid | None
 
