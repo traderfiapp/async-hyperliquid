@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, List, Tuple, Union, Literal, Optional, TypedDict
+from typing import Any, List, Tuple, Union, Literal, TypedDict
 
 from typing_extensions import NotRequired
 
@@ -65,6 +65,8 @@ class TriggerOrderType(TypedDict):
 
 OrderType = Union[LimitOrderType, TriggerOrderType]
 
+GroupOptions = Literal["na", "normalTpsl", "positionTpsl"]
+
 
 class PlaceOrderRequest(TypedDict):
     coin: str
@@ -73,16 +75,16 @@ class PlaceOrderRequest(TypedDict):
     limit_px: float
     reduce_only: bool
     order_type: OrderType
-    cloid: NotRequired[Cloid]
+    cloid: Cloid | None
 
 
 class CancelOrderRequest(TypedDict):
     coin: str
     oid: int
-    cloid: NotRequired[Cloid]
+    cloid: Cloid | None
 
 
-BatchCancelRequest = List[Tuple[str, int]]
+BatchCancelRequest = list[tuple[str, int]]
 
 
 class EncodedOrder(TypedDict):
@@ -174,7 +176,7 @@ class OrderStatus(str, Enum):
 
 class FilledOrderWithStatus(FrontendOrder):
     tif: str
-    cloid: Optional[str]
+    cloid: str | None
     children: List[Any]
 
 
@@ -349,8 +351,8 @@ class SpotMeta(Token):
     szDecimals: int
     weiDecimals: int
     tokenId: str
-    evmContract: Optional[str]
-    fullName: Optional[str]
+    evmContract: str | None
+    fullName: str | None
 
 
 class SpotMetaResponse(TypedDict):
@@ -389,7 +391,7 @@ class GasAuction(TypedDict):
     startTimeSeconds: int
     durationSeconds: int
     startGas: str
-    currentGas: Optional[str]
+    currentGas: str | None
     endGas: str
 
 

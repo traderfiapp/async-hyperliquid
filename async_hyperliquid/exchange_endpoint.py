@@ -22,7 +22,13 @@ class ExchangeAPI(AsyncAPI):
         self.address = address or account.address  # type: ignore
         super().__init__(Endpoint.EXCHANGE, base_url, session)
 
-    async def post_action(self, action: Any, vault: str | None = None) -> Any:
+    async def post_action(
+        self,
+        action: Any,
+        *,
+        vault: str | None = None,
+        expires: int | None = None,
+    ) -> Any:
         assert self.endpoint == Endpoint.EXCHANGE, (
             "only exchange endpoint supports action"
         )
@@ -31,17 +37,23 @@ class ExchangeAPI(AsyncAPI):
         signature = sign_action(
             self.account, action, None, nonce, self.base_url == MAINNET_API_URL
         )
-        return await self.post_action_with_sig(action, signature, nonce)
+        return await self.post_action_with_sig(
+            action, signature, nonce, vault=vault, expires=expires
+        )
 
     async def post_action_with_sig(
-        self, action: Any, sig: Any, nonce: int
+        self,
+        action: Any,
+        sig: Any,
+        nonce: int,
+        *,
+        vault: str | None = None,
+        expires: int | None = None,
     ) -> Any:
-        # current not support vault address, default to None
-        payloads = {
-            "action": action,
-            "nonce": nonce,
-            "signature": sig,
-            "vaultAddress": None,
-        }
+        payloads = {"action": action, "nonce": nonce, "signature": sig}
+        if vault:
+            payloads["vaultAddress"] = vault
+        if expires:
+            payloads["expiresAfter"] = expires
         self.logger.debug(f"Post action payloads: {payloads}")
         return await self.post(payloads)

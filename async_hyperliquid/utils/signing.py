@@ -11,6 +11,7 @@ from async_hyperliquid.utils.types import (
     OrderType,
     OrderAction,
     EncodedOrder,
+    GroupOptions,
     OrderBuilder,
     SignedAction,
     PlaceOrderRequest,
@@ -126,12 +127,14 @@ def encode_order(order: PlaceOrderRequest, asset: int) -> EncodedOrder:
 
 
 def orders_to_action(
-    encoded_orders: List[EncodedOrder], builder: OrderBuilder | None = None
+    encoded_orders: List[EncodedOrder],
+    grouping: GroupOptions = "na",
+    builder: OrderBuilder | None = None,
 ) -> OrderAction:
     action: OrderAction = {
         "type": "order",
         "orders": encoded_orders,
-        "grouping": "na",
+        "grouping": grouping,
     }
     if builder:
         action["builder"] = builder

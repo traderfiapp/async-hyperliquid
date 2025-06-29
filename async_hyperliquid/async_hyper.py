@@ -1,5 +1,5 @@
 import math
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal
 
 from aiohttp import ClientSession, ClientTimeout
 from eth_account import Account
@@ -9,10 +9,12 @@ from async_hyperliquid.utils.miscs import get_timestamp_ms
 from async_hyperliquid.utils.types import (
     Cloid,
     Position,
+    OrderType,
     LimitOrder,
     UserFunding,
     AccountState,
     EncodedOrder,
+    GroupOptions,
     OrderBuilder,
     OrderWithStatus,
     PlaceOrderRequest,
@@ -46,7 +48,7 @@ class AsyncHyper(AsyncAPI):
         )
         self.metas: Dict[str, Any] = {}
         # TODO: figure out the vault address
-        self.vault: Optional[str] = None
+        self.vault: str | None = None
 
     def _init_coin_assets(self) -> None:
         self.coin_assets = {}
@@ -325,7 +327,10 @@ class AsyncHyper(AsyncAPI):
     async def place_orders(
         self,
         orders: List[PlaceOrderRequest],
-        builder: Optional[OrderBuilder] = None,
+        grouping: GroupOptions = "na",
+        builder: OrderBuilder | None = None,
+        vault: str | None = None,
+        expires: int | None = None,
     ):
         encoded_orders: List[EncodedOrder] = []
         for order in orders:
@@ -334,9 +339,11 @@ class AsyncHyper(AsyncAPI):
 
         if builder:
             builder["b"] = builder["b"].lower()
-        action = orders_to_action(encoded_orders, builder)
+        action = orders_to_action(encoded_orders, grouping, builder)
 
-        return await self._exchange.post_action(action)
+        return await self._exchange.post_action(
+            action, vault=vault, expires=expires
+        )
 
     async def _slippage_price(
         self, coin: str, is_buy: bool, slippage: float, px: float
@@ -362,11 +369,11 @@ class AsyncHyper(AsyncAPI):
         px: float,
         is_market: bool = True,
         *,
-        order_type: dict = LimitOrder.IOC.value,
+        order_type: OrderType = LimitOrder.IOC.value,  # type: ignore
         reduce_only: bool = False,
-        cloid: Optional[Cloid] = None,
+        cloid: Cloid | None = None,
         slippage: float = 0.01,  # Default slippage is 1%
-        builder: Optional[OrderBuilder] = None,
+        builder: OrderBuilder | None = None,
     ):
         if is_market:
             market_price = await self.get_market_price(coin)
@@ -374,11 +381,11 @@ class AsyncHyper(AsyncAPI):
                 coin, is_buy, slippage, market_price
             )
             # Market order is an aggressive Limit Order IoC
-            order_type = LimitOrder.IOC.value
+            order_type = LimitOrder.IOC.value  # type: ignore
 
         coin_name = await self.get_coin_name(coin)
 
-        order_req = {
+        order_req: PlaceOrderRequest = {
             "coin": coin_name,
             "is_buy": is_buy,
             "sz": sz,
@@ -391,7 +398,7 @@ class AsyncHyper(AsyncAPI):
         if cloid:
             order_req["cloid"] = cloid
 
-        return await self.place_orders([order_req], builder=builder)  # type: ignore
+        return await self.place_orders([order_req], builder=builder)
 
     async def cancel_order(self, coin: str, oid: int):
         name = await self.get_coin_name(coin)
