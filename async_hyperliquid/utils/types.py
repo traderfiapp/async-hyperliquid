@@ -79,6 +79,10 @@ class PlaceOrderRequest(TypedDict):
 class CancelOrderRequest(TypedDict):
     coin: str
     oid: int
+
+
+class CancelOrderByCloid(TypedDict):
+    coin: str
     cloid: Cloid | None
 
 

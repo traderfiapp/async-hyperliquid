@@ -413,7 +413,13 @@ class AsyncHyper(AsyncAPI):
             reqs.append(req)
         return await self.cancel_orders(reqs)
 
-    async def cancel_orders(self, orders: List[CancelOrderRequest]):
+    async def cancel_orders(
+        self,
+        orders: List[CancelOrderRequest],
+        *,
+        vault: str | None = None,
+        expires: int | None = None,
+    ):
         action = {
             "type": "cancel",
             "cancels": [
@@ -425,7 +431,9 @@ class AsyncHyper(AsyncAPI):
             ],
         }
 
-        return await self._exchange.post_action(action, self.vault)
+        return await self._exchange.post_action(
+            action, vault=self.vault, expires=expires
+        )
 
     async def modify_order(self):
         # TODO: implement modify order

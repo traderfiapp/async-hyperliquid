@@ -118,9 +118,9 @@ def encode_order(order: PlaceOrderRequest, asset: int) -> EncodedOrder:
         "s": round_float(order["sz"]),
         "r": order["reduce_only"],
         "t": ensure_order_type(order["order_type"]),
-    }
+    }  # type: ignore
 
-    if order["cloid"] is not None:  # type: ignore
+    if order["cloid"] is not None:
         encoded_order["c"] = order["cloid"].to_raw()  # type: ignore
 
     return encoded_order
@@ -135,9 +135,8 @@ def orders_to_action(
         "type": "order",
         "orders": encoded_orders,
         "grouping": grouping,
+        "builder": builder,
     }
-    if builder:
-        action["builder"] = builder
     return action
 
 
