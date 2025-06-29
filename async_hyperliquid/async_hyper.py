@@ -16,6 +16,7 @@ from async_hyperliquid.utils.types import (
     OrderBuilder,
     OrderWithStatus,
     PlaceOrderRequest,
+    BatchCancelRequest,
     CancelOrderRequest,
     ClearinghouseState,
     UserNonFundingDelta,
@@ -392,15 +393,20 @@ class AsyncHyper(AsyncAPI):
 
         return await self.place_orders([order_req], builder=builder)  # type: ignore
 
-    async def cancel_order(self, coin: str, oid: int | str):
+    async def cancel_order(self, coin: str, oid: int):
         name = await self.get_coin_name(coin)
-        if not isinstance(oid, int):
-            oid = int(oid)
-        cancel_req = {"coin": name, "oid": oid}
-        return await self.cancel_orders([cancel_req])  # type: ignore
+        cancel_req: CancelOrderRequest = {"coin": name, "oid": int(oid)}
+        return await self.cancel_orders([cancel_req])
+
+    async def batch_cancel_orders(self, cancels: BatchCancelRequest):
+        reqs = []
+        for coin, oid in cancels:
+            coin_name = await self.get_coin_name(coin)
+            req = {"coin": coin_name, "oid": int(oid)}
+            reqs.append(req)
+        return await self.cancel_orders(reqs)
 
     async def cancel_orders(self, orders: List[CancelOrderRequest]):
-        # TODO: support cloid
         action = {
             "type": "cancel",
             "cancels": [
@@ -433,6 +439,7 @@ class AsyncHyper(AsyncAPI):
         return positions
 
     async def close_all_positions(self) -> None:
+        # TODO: bundle close all positions into one single requests
         positions = await self.get_all_positions()
         for position in positions:
             await self.close_position(position["coin"])

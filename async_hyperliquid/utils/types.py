@@ -78,8 +78,11 @@ class PlaceOrderRequest(TypedDict):
 
 class CancelOrderRequest(TypedDict):
     coin: str
-    oid: str
+    oid: int
     cloid: NotRequired[Cloid]
+
+
+BatchCancelRequest = List[Tuple[str, int]]
 
 
 class EncodedOrder(TypedDict):
