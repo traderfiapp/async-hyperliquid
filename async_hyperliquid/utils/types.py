@@ -1,7 +1,5 @@
 from enum import Enum
-from typing import Any, List, Tuple, Union, Literal, TypedDict
-
-from typing_extensions import NotRequired
+from typing import Any, Literal, TypedDict
 
 
 class Cloid:
@@ -63,7 +61,7 @@ class TriggerOrderType(TypedDict):
     trigger: TriggerOrderOptions
 
 
-OrderType = Union[LimitOrderType, TriggerOrderType]
+OrderType = LimitOrderType | TriggerOrderType
 
 GroupOptions = Literal["na", "normalTpsl", "positionTpsl"]
 
@@ -94,7 +92,7 @@ class EncodedOrder(TypedDict):
     s: str  # size
     r: bool  # reduce_only
     t: OrderType  # order type
-    c: NotRequired[Cloid]  # cloid
+    c: Cloid | None  # cloid
 
 
 class OrderBuilder(TypedDict):
@@ -104,9 +102,9 @@ class OrderBuilder(TypedDict):
 
 class OrderAction(TypedDict):
     type: Literal["order"]
-    orders: List[EncodedOrder]
+    orders: list[EncodedOrder]
     grouping: Literal["na", "normalTpsl", "positionTpsl"]
-    builder: NotRequired[OrderBuilder]
+    builder: OrderBuilder | None
 
 
 class Endpoint(str, Enum):
@@ -154,7 +152,7 @@ class FilledOrder(TypedDict):
     fee: str
     tid: int
     feeToken: str
-    builderFee: NotRequired[str]
+    builderFee: str | None
 
 
 class OrderStatus(str, Enum):
@@ -177,7 +175,7 @@ class OrderStatus(str, Enum):
 class FilledOrderWithStatus(FrontendOrder):
     tif: str
     cloid: str | None
-    children: List[Any]
+    children: list[Any]
 
 
 class InnerOrderWithStatus(TypedDict):
@@ -188,7 +186,7 @@ class InnerOrderWithStatus(TypedDict):
 
 class OrderWithStatus(TypedDict):
     status: Literal["order", "unknowOid"]
-    order: NotRequired[InnerOrderWithStatus]
+    order: InnerOrderWithStatus | None
 
 
 class L2Book(TypedDict):
@@ -198,26 +196,26 @@ class L2Book(TypedDict):
 
 
 class Depth(TypedDict):
-    bids: List[L2Book]
-    asks: List[L2Book]
+    bids: list[L2Book]
+    asks: list[L2Book]
 
 
 class PerpMeta(TypedDict):
     name: str
     szDecimals: int
     maxLeverage: int
-    onlyIsolated: NotRequired[bool]
-    isDelisted: NotRequired[bool]
+    onlyIsolated: bool | None
+    isDelisted: bool | None
 
 
 class PerpMetaResponse(TypedDict):
-    universe: List[PerpMeta]
+    universe: list[PerpMeta]
 
 
 class PerpMetaCtx(TypedDict):
     dayNtlVlm: str
     funding: str
-    impactPxs: List[str]
+    impactPxs: list[str]
     markPx: str
     midPx: str
     openInterest: str
@@ -226,7 +224,7 @@ class PerpMetaCtx(TypedDict):
     prevDayPx: str
 
 
-PerpMetaCtxResponse = List[Union[PerpMetaResponse, List[PerpMetaCtx]]]
+PerpMetaCtxResponse = list[PerpMetaResponse | list[PerpMetaCtx]]
 
 
 class AssetFunding(TypedDict):
@@ -268,7 +266,7 @@ class MarginSummary(TypedDict):
 
 
 class ClearinghouseState(TypedDict):
-    assetPositions: List[AssetPosition]
+    assetPositions: list[AssetPosition]
     crossMaintenanceMarginUsed: str
     crossMarginSummary: MarginSummary
     marginSummary: MarginSummary
@@ -319,13 +317,17 @@ class UserVaultWithdraw(TypedDict):
     netWithdrawnUsd: str
 
 
-UserNonFundingDelta = Union[
-    UserDeposit, UserWithdraw, UserTransfer, UserVaultDeposit, UserVaultWithdraw
-]
+UserNonFundingDelta = (
+    UserDeposit
+    | UserWithdraw
+    | UserTransfer
+    | UserVaultDeposit
+    | UserVaultWithdraw
+)
 
 
 class UserFunding(TypedDict):
-    delta: Union[UserFundingDelta, UserNonFundingDelta]
+    delta: UserFundingDelta | UserNonFundingDelta
     hash: str
     time: int
 
@@ -344,7 +346,7 @@ class Token(TypedDict):
 
 
 class TokenPairs(Token):
-    tokens: Tuple[int, int]
+    tokens: tuple[int, int]
 
 
 class SpotMeta(Token):
@@ -356,8 +358,8 @@ class SpotMeta(Token):
 
 
 class SpotMetaResponse(TypedDict):
-    tokens: List[SpotMeta]
-    universe: List[TokenPairs]
+    tokens: list[SpotMeta]
+    universe: list[TokenPairs]
 
 
 class SpotMetaCtx(TypedDict):
@@ -367,7 +369,7 @@ class SpotMetaCtx(TypedDict):
     prevDayPx: str
 
 
-SpotMetaCtxResponse = List[Union[SpotMetaResponse, List[SpotMetaCtx]]]
+SpotMetaCtxResponse = list[SpotMetaResponse | list[SpotMetaCtx]]
 
 
 class TokenBalance(TypedDict):
@@ -379,7 +381,7 @@ class TokenBalance(TypedDict):
 
 
 class SpotClearinghouseState(TypedDict):
-    balances: List[TokenBalance]
+    balances: list[TokenBalance]
 
 
 class AccountState(TypedDict):
@@ -405,22 +407,22 @@ class DeployState(TypedDict):
     token: int
     spec: DeployStateSpec
     fullName: str
-    spots: List[int]
+    spots: list[int]
     maxSupply: int
     hyperliquidityGenesisBalance: str
     totalGenesisBalanceWei: str
-    userGenesisBalances: List[Tuple[str, str]]
-    existingTokenGenesisBalances: List[Tuple[int, str]]
+    userGenesisBalances: list[tuple[str, str]]
+    existingTokenGenesisBalances: list[tuple[int, str]]
 
 
 class SpotDeployState(TypedDict):
-    states: List[DeployState]
+    states: list[DeployState]
     gasAuction: GasAuction
 
 
 class TokenGenesis(TypedDict):
-    userBalances: List[Tuple[str, str]]
-    existingTokenBalances: List[Any]
+    userBalances: list[tuple[str, str]]
+    existingTokenBalances: list[Any]
 
 
 class TokenDetails(TypedDict):
@@ -433,10 +435,10 @@ class TokenDetails(TypedDict):
     midPx: str
     markPx: str
     prevDayPx: str
-    genesis: List[TokenGenesis]
+    genesis: list[TokenGenesis]
     deployer: str
     deployGas: str
     deployTime: str
     seededUsdc: str
-    nonCirculatingUserBalances: List[Any]
+    nonCirculatingUserBalances: list[Any]
     futureEmissions: str
