@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import Any
 
 from aiohttp import ClientSession
 
@@ -28,13 +28,13 @@ class InfoAPI(AsyncAPI):
     def __init__(self, base_url: str, session: ClientSession):
         super().__init__(Endpoint.INFO, base_url, session)
 
-    async def get_all_mids(self) -> Dict[str, int]:
+    async def get_all_mids(self) -> dict[str, int]:
         payloads = {"type": "allMids"}
         return await self.post(payloads)
 
     async def get_user_open_orders(
         self, address: str, is_frontend: bool = False
-    ) -> List[Union[Order, FrontendOrder]]:
+    ) -> list[Order | FrontendOrder]:
         payloads = {
             "type": "frontendOpenOrders" if is_frontend else "openOrders",
             "user": address,
@@ -48,7 +48,7 @@ class InfoAPI(AsyncAPI):
         *,
         start_time: int | None = None,
         end_time: int | None = None,
-    ) -> List[FilledOrder]:
+    ) -> list[FilledOrder]:
         payloads = {
             "type": "userFillsByTime" if start_time else "userFills",
             "user": address,
@@ -71,7 +71,7 @@ class InfoAPI(AsyncAPI):
 
     async def get_depth(
         self, coin: str, level: int | None = None, mantissa: int | None = None
-    ) -> List[Depth]:
+    ) -> list[Depth]:
         payloads: dict[str, Any] = {"type": "l2Book", "coin": coin}
         if level:
             payloads["nSigFigs"] = level
@@ -90,21 +90,21 @@ class InfoAPI(AsyncAPI):
 
     async def get_user_order_history(
         self, address: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         payloads = {"type": "historicalOrders", "user": address}
         return await self.post(payloads)
 
-    async def get_user_twap_fills(self, address: str) -> List[Dict[str, Any]]:
+    async def get_user_twap_fills(self, address: str) -> list[dict[str, Any]]:
         payloads = {"type": "userTwapSliceFills", "user": address}
         return await self.post(payloads)
 
-    async def get_user_subaccounts(self, address: str) -> List[Dict[str, Any]]:
+    async def get_user_subaccounts(self, address: str) -> list[dict[str, Any]]:
         payloads = {"type": "subAccounts", "user": address}
         return await self.post(payloads)
 
     async def get_vault_info(
         self, address: str, user: str | None = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         payloads = {"type": "vaultDetails", "vaultAddress": address}
         if user:
             payloads["user"] = user
@@ -112,35 +112,35 @@ class InfoAPI(AsyncAPI):
 
     async def get_user_vault_deposits(
         self, address: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         payloads = {"type": "userVaultEquities", "user": address}
         return await self.post(payloads)
 
-    async def get_user_role(self, address: str) -> Dict[str, str]:
+    async def get_user_role(self, address: str) -> dict[str, str]:
         payloads = {"type": "userRole", "user": address}
         return await self.post(payloads)
 
-    async def get_user_staking(self, address: str) -> List[Dict[str, Any]]:
+    async def get_user_staking(self, address: str) -> list[dict[str, Any]]:
         payloads = {"type": "delegations", "user": address}
         return await self.post(payloads)
 
-    async def get_user_portfolio(self, address: str) -> List[Any]:
+    async def get_user_portfolio(self, address: str) -> list[Any]:
         payloads = {"type": "portfolio", "user": address}
         return await self.post(payloads)
 
-    async def get_user_staking_summary(self, address: str) -> Dict[str, Any]:
+    async def get_user_staking_summary(self, address: str) -> dict[str, Any]:
         payloads = {"type": "delegatorSummary", "user": address}
         return await self.post(payloads)
 
     async def get_user_staking_history(
         self, address: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         payloads = {"type": "delegatorHistory", "user": address}
         return await self.post(payloads)
 
     async def get_user_staking_rewards(
         self, address: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         payloads = {"type": "delegatorRewards", "user": address}
         return await self.post(payloads)
 
@@ -164,7 +164,7 @@ class InfoAPI(AsyncAPI):
         start_time: int,
         end_time: int | None = None,
         is_funding: bool = True,
-    ) -> List[UserFunding]:
+    ) -> list[UserFunding]:
         payloads = {
             "type": "userFunding"
             if is_funding
@@ -177,7 +177,7 @@ class InfoAPI(AsyncAPI):
 
     async def get_funding_rate(
         self, coin: str, start_time: int, end_time: int | None = None
-    ) -> List[FundingRate]:
+    ) -> list[FundingRate]:
         payloads = {
             "type": "fundingHistory",
             "coin": coin,
@@ -186,11 +186,11 @@ class InfoAPI(AsyncAPI):
         }
         return await self.post(payloads)
 
-    async def get_predicted_funding(self) -> List[Any]:
+    async def get_predicted_funding(self) -> list[Any]:
         payloads = {"type": "predictedFundings"}
         return await self.post(payloads)
 
-    async def get_perps_at_open_interest_cap(self) -> List[str]:
+    async def get_perps_at_open_interest_cap(self) -> list[str]:
         payloads = {"type": "perpsAtOpenInterestCap"}
         return await self.post(payloads)
 
