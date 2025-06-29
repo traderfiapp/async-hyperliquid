@@ -350,20 +350,20 @@ class AsyncHyper(AsyncAPI):
             action, vault=vault, expires=expires
         )
 
-    # async def _slippage_price(
-    #     self, coin: str, is_buy: bool, slippage: float, px: float
-    # ) -> float:
-    #     coin_name = await self.get_coin_name(coin)
-    #     if not px:
-    #         all_mids = await self._info.get_all_mids()
-    #         px = float(all_mids[coin_name])
+    async def _slippage_price(
+        self, coin: str, is_buy: bool, slippage: float, px: float
+    ) -> float:
+        coin_name = await self.get_coin_name(coin)
+        if not px:
+            all_mids = await self._info.get_all_mids()
+            px = float(all_mids[coin_name])
 
-    #     asset = await self.get_coin_asset(coin)
-    #     is_spot = asset >= 10_000
-    #     sz_decimals = await self.get_coin_sz_decimals(coin)
-    #     px *= (1 + slippage) if is_buy else (1 - slippage)
-    #     px_decimals = (6 if not is_spot else 8) - sz_decimals
-    #     return round_px(px, px_decimals)
+        asset = await self.get_coin_asset(coin)
+        is_spot = asset >= 10_000
+        sz_decimals = await self.get_coin_sz_decimals(coin)
+        px *= (1 + slippage) if is_buy else (1 - slippage)
+        px_decimals = (6 if not is_spot else 8) - sz_decimals
+        return round_px(px, px_decimals)
 
     async def _round_sz_px(
         self, coin: str, sz: float, px: float
