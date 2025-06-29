@@ -1,6 +1,8 @@
 from enum import Enum
 from typing import Any, Literal, TypedDict
 
+from typing_extensions import NotRequired
+
 
 class Cloid:
     def __init__(self, raw_cloid: str):
@@ -99,7 +101,7 @@ class EncodedOrder(TypedDict):
     s: str  # size
     r: bool  # reduce_only
     t: OrderType  # order type
-    c: Cloid | None  # cloid
+    c: NotRequired[Cloid]
 
 
 class OrderBuilder(TypedDict):
@@ -111,7 +113,7 @@ class OrderAction(TypedDict):
     type: Literal["order"]
     orders: list[EncodedOrder]
     grouping: Literal["na", "normalTpsl", "positionTpsl"]
-    builder: OrderBuilder | None
+    builder: NotRequired[OrderBuilder]
 
 
 class Endpoint(str, Enum):

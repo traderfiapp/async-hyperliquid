@@ -41,8 +41,8 @@ async def test_spot_order(hl: AsyncHyper):
 @pytest.mark.asyncio(loop_scope="session")
 async def test_perp_order(hl: AsyncHyper):
     coin = "BTC"
-    buy_value = 10 + 0.3
-    buy_price = 10_000.0
+    buy_value = 105
+    buy_price = 105_000.0
     buy_sz = buy_value / buy_price
     order_req = {
         "coin": coin,
