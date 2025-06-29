@@ -5,7 +5,7 @@ from aiohttp import ClientSession, ClientTimeout
 from eth_account import Account
 
 from async_hyperliquid.async_api import AsyncAPI
-from async_hyperliquid.utils.miscs import get_timestamp_ms
+from async_hyperliquid.utils.miscs import round_px, round_sz, get_timestamp_ms
 from async_hyperliquid.utils.types import (
     Cloid,
     Position,
@@ -13,7 +13,6 @@ from async_hyperliquid.utils.types import (
     LimitOrder,
     UserFunding,
     AccountState,
-    EncodedOrder,
     GroupOptions,
     OrderBuilder,
     OrderWithStatus,
@@ -334,16 +333,13 @@ class AsyncHyper(AsyncAPI):
 
     async def place_orders(
         self,
-        orders: BatchPlaceOrderRequest,
+        orders: list[PlaceOrderRequest],
         grouping: GroupOptions = "na",
         builder: OrderBuilder | None = None,
         vault: str | None = None,
         expires: int | None = None,
     ):
-        encoded_orders: list[EncodedOrder] = []
-        for order in orders:
-            asset = await self.get_coin_asset(order["coin"])
-            encoded_orders.append(encode_order(order, asset))
+        encoded_orders = [encode_order(o) for o in orders]
 
         if builder:
             builder["b"] = builder["b"].lower()
@@ -354,21 +350,29 @@ class AsyncHyper(AsyncAPI):
             action, vault=vault, expires=expires
         )
 
-    async def _slippage_price(
-        self, coin: str, is_buy: bool, slippage: float, px: float
-    ) -> float:
-        coin_name = await self.get_coin_name(coin)
-        if not px:
-            all_mids = await self._info.get_all_mids()
-            px = float(all_mids[coin_name])
+    # async def _slippage_price(
+    #     self, coin: str, is_buy: bool, slippage: float, px: float
+    # ) -> float:
+    #     coin_name = await self.get_coin_name(coin)
+    #     if not px:
+    #         all_mids = await self._info.get_all_mids()
+    #         px = float(all_mids[coin_name])
 
+    #     asset = await self.get_coin_asset(coin)
+    #     is_spot = asset >= 10_000
+    #     sz_decimals = await self.get_coin_sz_decimals(coin)
+    #     px *= (1 + slippage) if is_buy else (1 - slippage)
+    #     px_decimals = (6 if not is_spot else 8) - sz_decimals
+    #     return round_px(px, px_decimals)
+
+    async def _round_sz_px(
+        self, coin: str, sz: float, px: float
+    ) -> tuple[int, float, float]:
         asset = await self.get_coin_asset(coin)
         is_spot = asset >= 10_000
         sz_decimals = await self.get_coin_sz_decimals(coin)
-        px *= (1 + slippage) if is_buy else (1 - slippage)
-        return round(
-            float(f"{px:.5g}"), (6 if not is_spot else 8) - sz_decimals
-        )
+        px_decimals = (6 if not is_spot else 8) - sz_decimals
+        return asset, round_sz(sz, sz_decimals), round_px(px, px_decimals)
 
     async def place_order(
         self,
@@ -386,16 +390,15 @@ class AsyncHyper(AsyncAPI):
     ):
         if is_market:
             market_price = await self.get_market_price(coin)
-            px = await self._slippage_price(
-                coin, is_buy, slippage, market_price
-            )
+            slippage_factor = (1 + slippage) if is_buy else (1 - slippage)
+            px = market_price * slippage_factor
             # Market order is an aggressive Limit Order IoC
             order_type = LimitOrder.IOC.value  # type: ignore
 
-        coin_name = await self.get_coin_name(coin)
+        asset, sz, px = await self._round_sz_px(coin, sz, px)
 
         order_req: PlaceOrderRequest = {
-            "coin": coin_name,
+            "asset": asset,
             "is_buy": is_buy,
             "sz": sz,
             "px": px,
@@ -419,26 +422,13 @@ class AsyncHyper(AsyncAPI):
     ):
         reqs = []
         if is_market:
-            market_prices = await self.get_all_market_prices()
-            order_type = LimitOrder.IOC.value
-            for o in orders:
-                coin = o["coin"]
-                coin_name = await self.get_coin_name(coin)
-                market_price = market_prices[coin]
-                px = await self._slippage_price(
-                    coin, o["is_buy"], slippage, market_price
-                )
-                req = {
-                    **o,
-                    "coin": coin_name,
-                    "px": px,
-                    "order_type": order_type,
-                }
-                reqs.append(req)
+            reqs = await self._get_batch_market_orders(orders, slippage)
         else:
             for o in orders:
-                coin_name = await self.get_coin_name(o["coin"])
-                req = {**o, "coin": coin_name}
+                asset, sz, px = await self._round_sz_px(
+                    o["coin"], o["sz"], o["px"]
+                )
+                req = {**o, "asset": asset, "sz": sz, "px": px}
                 reqs.append(req)
 
         return await self.place_orders(
@@ -448,6 +438,30 @@ class AsyncHyper(AsyncAPI):
             vault=vault,
             expires=expires,
         )
+
+    async def _get_batch_market_orders(
+        self,
+        orders: BatchPlaceOrderRequest,
+        slippage: float = 0.01,  # Default slippage is 1%
+    ) -> list[PlaceOrderRequest]:
+        reqs = []
+        market_prices = await self.get_all_market_prices()
+        order_type = LimitOrder.IOC.value
+        for o in orders:
+            coin = o["coin"]
+            market_price = market_prices[coin]
+            slippage_factor = (1 + slippage) if o["is_buy"] else (1 - slippage)
+            px = market_price * slippage_factor
+            asset, sz, px = await self._round_sz_px(coin, o["sz"], px)
+            req = {
+                **o,
+                "asset": asset,
+                "sz": sz,
+                "px": px,
+                "order_type": order_type,
+            }
+            reqs.append(req)
+        return reqs
 
     async def cancel_order(self, coin: str, oid: int):
         name = await self.get_coin_name(coin)
@@ -480,8 +494,11 @@ class AsyncHyper(AsyncAPI):
             ],
         }
 
+        if vault is None:
+            vault = self.vault
+
         return await self._exchange.post_action(
-            action, vault=self.vault, expires=expires
+            action, vault=vault, expires=expires
         )
 
     async def cancel_orders_by_cloid(self):

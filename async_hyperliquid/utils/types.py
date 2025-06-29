@@ -68,8 +68,7 @@ OrderType = LimitOrderType | TriggerOrderType
 GroupOptions = Literal["na", "normalTpsl", "positionTpsl"]
 
 
-class PlaceOrderRequest(TypedDict):
-    coin: str
+class BasicPlaceOrderRequest(TypedDict):
     is_buy: bool
     sz: float
     px: float
@@ -78,7 +77,15 @@ class PlaceOrderRequest(TypedDict):
     cloid: Cloid | None
 
 
-BatchPlaceOrderRequest = list[PlaceOrderRequest]
+class PlaceOrderRequest(BasicPlaceOrderRequest):
+    asset: int
+
+
+class PlaceOrdersRequest(BasicPlaceOrderRequest):
+    coin: str
+
+
+BatchPlaceOrderRequest = list[PlaceOrdersRequest]
 
 
 class CancelOrderRequest(TypedDict):

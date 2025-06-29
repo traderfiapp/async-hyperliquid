@@ -110,9 +110,9 @@ def ensure_order_type(order_type: OrderType) -> OrderType:
     raise ValueError("Invalid order type", order_type)
 
 
-def encode_order(order: PlaceOrderRequest, asset: int) -> EncodedOrder:
+def encode_order(order: PlaceOrderRequest) -> EncodedOrder:
     encoded_order: EncodedOrder = {
-        "a": asset,
+        "a": order["asset"],
         "b": order["is_buy"],
         "p": round_float(order["px"]),
         "s": round_float(order["sz"]),
