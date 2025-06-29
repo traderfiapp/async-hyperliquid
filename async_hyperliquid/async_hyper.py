@@ -123,7 +123,8 @@ class AsyncHyper(AsyncAPI):
             self._init_asset_sz_decimals()
 
     async def get_coin_name(self, coin: str) -> str:
-        await self.init_metas()
+        if coin not in self.coin_names:
+            await self.init_metas()
 
         if coin not in self.coin_names:
             raise ValueError(f"Coin {coin} not found")
@@ -180,15 +181,25 @@ class AsyncHyper(AsyncAPI):
         prices = {}
 
         await self.init_metas()
+        spot_data = None
+        perp_data = None
         if is_spot or is_all:
             spot_data = await self._info.get_spot_meta_ctx()
         if is_perp or is_all:
             perp_data = await self._info.get_perp_meta_ctx()
 
         for coin, asset in self.coin_assets.items():
-            if asset < 10_000 and (is_perp or is_all):  # perp or all
+            if (
+                asset < 10_000
+                and (is_perp or is_all)
+                and isinstance(perp_data, list)
+            ):  # perp or all
                 prices[coin] = float(perp_data[1][asset]["markPx"])
-            if asset >= 10_000 and (is_spot or is_all):  # spot or all
+            if (
+                asset >= 10_000
+                and (is_spot or is_all)
+                and isinstance(spot_data, list)
+            ):  # spot or all
                 asset -= 10_000
                 prices[coin] = float(spot_data[1][asset]["markPx"])
         return prices
