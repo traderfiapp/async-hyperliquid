@@ -1,5 +1,5 @@
 import math
-from typing import Any, Dict, List, Literal
+from typing import Any, Literal
 
 from aiohttp import ClientSession, ClientTimeout
 from eth_account import Account
@@ -22,6 +22,7 @@ from async_hyperliquid.utils.types import (
     CancelOrderRequest,
     ClearinghouseState,
     UserNonFundingDelta,
+    BatchPlaceOrderRequest,
     SpotClearinghouseState,
 )
 from async_hyperliquid.info_endpoint import InfoAPI
@@ -46,7 +47,7 @@ class AsyncHyper(AsyncAPI):
         self._exchange = ExchangeAPI(
             self.account, self.session, self.base_url, address=self.address
         )
-        self.metas: Dict[str, Any] = {}
+        self.metas: dict[str, Any] = {}
         # TODO: figure out the vault address
         self.vault: str | None = None
 
@@ -161,7 +162,7 @@ class AsyncHyper(AsyncAPI):
 
     async def get_token_id(self, coin: str) -> str | None:
         coin_name = await self.get_coin_name(coin)
-        spot_metas: Dict[str, Any] = self.metas["spots"]
+        spot_metas: dict[str, Any] = self.metas["spots"]
         for coin_info in spot_metas["universe"]:
             if coin_name == coin_info["name"]:
                 base, _quote = coin_info["tokens"]
@@ -176,7 +177,7 @@ class AsyncHyper(AsyncAPI):
 
     async def get_all_market_prices(
         self, market: Literal["spot", "perp", "all"] = "all"
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         is_spot = market == "spot"
         is_perp = market == "perp"
         is_all = market == "all"
@@ -235,7 +236,7 @@ class AsyncHyper(AsyncAPI):
 
     async def get_account_portfolio(
         self, address: str | None = None
-    ) -> List[Any]:
+    ) -> list[Any]:
         if not address:
             address = self.address
 
@@ -247,7 +248,7 @@ class AsyncHyper(AsyncAPI):
         address: str | None = None,
         start_time: int | None = None,
         end_time: int | None = None,
-    ) -> List[UserNonFundingDelta]:
+    ) -> list[UserNonFundingDelta]:
         if not start_time:
             now = get_timestamp_ms()
             one_hour = 60 * 60 * 1000  # one hour in millis
@@ -264,7 +265,7 @@ class AsyncHyper(AsyncAPI):
         address: str | None = None,
         start_time: int | None = None,
         end_time: int | None = None,
-    ) -> List[UserFunding]:
+    ) -> list[UserFunding]:
         return await self.get_latest_ledgers(
             "deposit", address, start_time, end_time
         )  # type: ignore
@@ -274,7 +275,7 @@ class AsyncHyper(AsyncAPI):
         address: str | None = None,
         start_time: int | None = None,
         end_time: int | None = None,
-    ) -> List[UserFunding]:
+    ) -> list[UserFunding]:
         return await self.get_latest_ledgers(
             "withdraw", address, start_time, end_time
         )  # type: ignore
@@ -284,7 +285,7 @@ class AsyncHyper(AsyncAPI):
         address: str | None = None,
         start_time: int | None = None,
         end_time: int | None = None,
-    ) -> List[UserFunding]:
+    ) -> list[UserFunding]:
         return await self.get_latest_ledgers(
             "accountClassTransfer", address, start_time, end_time
         )  # type: ignore
@@ -326,19 +327,20 @@ class AsyncHyper(AsyncAPI):
 
     async def place_orders(
         self,
-        orders: List[PlaceOrderRequest],
+        orders: BatchPlaceOrderRequest,
         grouping: GroupOptions = "na",
         builder: OrderBuilder | None = None,
         vault: str | None = None,
         expires: int | None = None,
     ):
-        encoded_orders: List[EncodedOrder] = []
+        encoded_orders: list[EncodedOrder] = []
         for order in orders:
             asset = await self.get_coin_asset(order["coin"])
             encoded_orders.append(encode_order(order, asset))
 
         if builder:
             builder["b"] = builder["b"].lower()
+
         action = orders_to_action(encoded_orders, grouping, builder)
 
         return await self._exchange.post_action(
@@ -395,10 +397,50 @@ class AsyncHyper(AsyncAPI):
             "cloid": cloid,
         }
 
-        if cloid:
-            order_req["cloid"] = cloid
-
         return await self.place_orders([order_req], builder=builder)
+
+    async def batch_place_orders(
+        self,
+        orders: BatchPlaceOrderRequest,
+        *,
+        grouping: GroupOptions = "na",
+        is_market: bool = False,
+        slippage: float = 0.01,  # Default slippage is 1%
+        builder: OrderBuilder | None = None,
+        vault: str | None = None,
+        expires: int | None = None,
+    ):
+        reqs = []
+        if is_market:
+            market_prices = await self.get_all_market_prices()
+            order_type = LimitOrder.IOC.value
+            for o in orders:
+                coin = o["coin"]
+                coin_name = await self.get_coin_name(coin)
+                market_price = market_prices[coin]
+                px = await self._slippage_price(
+                    coin, o["is_buy"], slippage, market_price
+                )
+                req = {
+                    **o,
+                    "coin": coin_name,
+                    "limit_px": px,
+                    "order_type": order_type,
+                }
+                reqs.append(req)
+        else:
+            for o in orders:
+                coin_name = await self.get_coin_name(o["coin"])
+                req = {**o, "coin": coin_name}
+                reqs.append(req)
+
+        return await self.place_orders(
+            reqs,
+            grouping=grouping,
+            builder=builder,
+            vault=vault,
+            expires=expires,
+        )
 
     async def cancel_order(self, coin: str, oid: int):
         name = await self.get_coin_name(coin)
@@ -415,7 +457,7 @@ class AsyncHyper(AsyncAPI):
 
     async def cancel_orders(
         self,
-        orders: List[CancelOrderRequest],
+        orders: list[CancelOrderRequest],
         *,
         vault: str | None = None,
         expires: int | None = None,
@@ -445,7 +487,7 @@ class AsyncHyper(AsyncAPI):
 
     async def get_all_positions(
         self, address: str | None = None
-    ) -> List[Position]:
+    ) -> list[Position]:
         if not address:
             address = self.address
 
@@ -515,8 +557,8 @@ class AsyncHyper(AsyncAPI):
         return await self._exchange.post_action_with_sig(action, sig, nonce)
 
     def get_leverage_from_positions(
-        self, positions: List[Position]
-    ) -> Dict[str, int]:
+        self, positions: list[Position]
+    ) -> dict[str, int]:
         leverages = {}
         for position in positions:
             coin = position["coin"]

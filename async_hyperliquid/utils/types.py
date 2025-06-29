@@ -76,6 +76,9 @@ class PlaceOrderRequest(TypedDict):
     cloid: Cloid | None
 
 
+BatchPlaceOrderRequest = list[PlaceOrderRequest]
+
+
 class CancelOrderRequest(TypedDict):
     coin: str
     oid: int
