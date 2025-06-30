@@ -136,21 +136,24 @@ class RateLimit(TypedDict):
 
 class Order(TypedDict):
     coin: str
-    limitPx: str
-    oid: int
     side: Literal["A", "B"]  # A: ask/sell/short, B: bid/buy/long
+    limitPx: str
     sz: str
+    oid: int
     timestamp: int
+    origSz: str
 
 
 class FrontendOrder(Order):
-    isPositionTpsl: bool
-    orderType: str  # Maybe Literal["Limit", "Trigger"] is more accurate
-    origSz: str
-    reduceOnly: bool
-    isTrigger: bool
     triggerCondition: str
+    isTrigger: bool
     triggerPx: str
+    children: list["FrontendOrder"]
+    isPositionTpsl: bool
+    reduceOnly: bool
+    orderType: str  # "Take Profit Market/Limit", "Stop Loss Market/Limit"
+    tif: Literal["Gtc", "Alo"] | None
+    cloid: str | None
 
 
 class FilledOrder(TypedDict):
@@ -188,14 +191,8 @@ class OrderStatus(str, Enum):
     SCHEDULED_CANCELED = "scheduledCanceled"
 
 
-class FilledOrderWithStatus(FrontendOrder):
-    tif: str
-    cloid: str | None
-    children: list[Any]
-
-
 class InnerOrderWithStatus(TypedDict):
-    order: FilledOrderWithStatus
+    order: FrontendOrder
     status: OrderStatus
     statusTimestamp: int
 
