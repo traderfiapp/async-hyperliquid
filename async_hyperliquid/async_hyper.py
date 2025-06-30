@@ -126,7 +126,7 @@ class AsyncHyper(AsyncAPI):
             self._init_asset_sz_decimals()
 
     async def get_coin_name(self, coin: str) -> str:
-        if coin not in self.coin_names:
+        if not hasattr(self, "coin_names") or coin not in self.coin_names:
             await self.init_metas()
 
         if coin not in self.coin_names:

@@ -29,8 +29,10 @@ def convert_to_numeric(data: Any) -> Any:
 
 
 def round_px(px: float, decimals: int) -> float:
-    return round(float(f"{px:.5g}"), decimals)
+    px_float = float(px)
+    return round(float(f"{px_float:.5g}"), decimals)
 
 
 def round_sz(sz: float, decimals: int) -> float:
-    return round(float(f"{sz:.{decimals}g}"), decimals)
+    sz_float = float(sz)
+    return round(float(f"{sz_float:.{decimals}g}"), decimals)
