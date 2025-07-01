@@ -41,15 +41,14 @@ async def test_spot_order(hl: AsyncHyper):
 @pytest.mark.asyncio(loop_scope="session")
 async def test_perp_order(hl: AsyncHyper):
     coin = "BTC"
-    buy_value = 105
-    buy_price = 105_000.0
-    buy_sz = buy_value / buy_price
+    px = 105_001.0
+    sz = 0.0001
     order_req = {
         "coin": coin,
         "is_buy": True,
-        "sz": buy_sz,
-        "px": buy_price,
-        "is_market": False,
+        "sz": sz,
+        "px": px,
+        "is_market": True,
         "order_type": LimitOrder.ALO.value,
     }
 
@@ -142,7 +141,7 @@ async def test_batch_place_orders(hl: AsyncHyper):
     resp = await hl.batch_place_orders(orders, grouping="normalTpsl")  # type: ignore
     print("Batch place orders with 'normalTpsl' response: ", resp)
 
-    orders = await hl.get_user_open_orders()
+    orders = await hl.get_user_open_orders(is_frontend=True)
     cancels = []
     for o in orders:
         coin = o["coin"]
