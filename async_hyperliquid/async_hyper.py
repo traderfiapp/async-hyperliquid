@@ -5,7 +5,7 @@ from aiohttp import ClientSession, ClientTimeout
 from eth_account import Account
 
 from async_hyperliquid.async_api import AsyncAPI
-from async_hyperliquid.utils.miscs import round_float, get_timestamp_ms
+from async_hyperliquid.utils.miscs import round_px, round_sz, get_timestamp_ms
 from async_hyperliquid.utils.types import (
     Cloid,
     Position,
@@ -363,7 +363,7 @@ class AsyncHyper(AsyncAPI):
         sz_decimals = await self.get_coin_sz_decimals(coin)
         px *= (1 + slippage) if is_buy else (1 - slippage)
         px_decimals = (6 if not is_spot else 8) - sz_decimals
-        return round_float(px, px_decimals)
+        return round_px(px, px_decimals)
 
     async def _round_sz_px(
         self, coin: str, sz: float, px: float
@@ -372,7 +372,7 @@ class AsyncHyper(AsyncAPI):
         is_spot = asset >= 10_000
         sz_decimals = await self.get_coin_sz_decimals(coin)
         px_decimals = (6 if not is_spot else 8) - sz_decimals
-        return asset, round_float(sz, sz_decimals), round_float(px, px_decimals)
+        return asset, round_sz(sz, sz_decimals), round_px(px, px_decimals)
 
     async def place_order(
         self,

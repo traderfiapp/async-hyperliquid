@@ -28,6 +28,11 @@ def convert_to_numeric(data: Any) -> Any:
     return data
 
 
-def round_float(value: float, decimals: int) -> float:
-    v = float(value)
-    return round(float(f"{v:.18g}"), decimals)
+def round_px(px: float, decimals: int) -> float:
+    px_float = float(px)
+    return round(float(f"{px_float:.5g}"), decimals)
+
+
+def round_sz(sz: float, decimals: int) -> float:
+    sz_float = float(sz)
+    return round(float(f"{sz_float:.{decimals}g}"), decimals)
