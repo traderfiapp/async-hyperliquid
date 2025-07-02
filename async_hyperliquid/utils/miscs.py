@@ -28,29 +28,17 @@ def convert_to_numeric(data: Any) -> Any:
     return data
 
 
-def get_float_significant_figures(value: float) -> int:
-    if value == 0:
-        return 1
-
-    str_value = f"{value:.8g}"
-
-    digits = str_value.replace(".", "").lstrip("0")
-
-    if "e" in digits.lower():
-        mantissa = digits.split("e")[0]
-        digits = mantissa.rstrip("0")
-
-    return len(digits)
-
-
 def round_px(px: float, decimals: int) -> float | int:
     f = float(px)
     v = round_float(f, decimals)
-    mantissa = get_float_significant_figures(v)
-    if mantissa > 5:
+
+    if abs(v - round(v)) < 1e-12:
+        return int(round(v))
+
+    if v >= 100_000:
         return int(v)
-    else:
-        return v
+
+    return round(float(f"{v:.5g}"), decimals)
 
 
 def round_float(value: float, decimals: int) -> float:
