@@ -32,7 +32,8 @@ def get_float_significant_figures(value: float) -> int:
     if value == 0:
         return 1
 
-    str_value = f"{value:.18g}"
+    str_value = f"{value:.8g}"
+
     digits = str_value.replace(".", "").lstrip("0")
 
     if "e" in digits.lower():
@@ -54,4 +55,4 @@ def round_px(px: float, decimals: int) -> float | int:
 
 def round_float(value: float, decimals: int) -> float:
     v = float(value)
-    return round(float(f"{v:.18g}"), decimals)
+    return round(float(f"{v:.8g}"), decimals)
