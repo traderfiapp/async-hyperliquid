@@ -455,16 +455,11 @@ class AsyncHyper(AsyncAPI):
         return reqs
 
     async def cancel_order(self, coin: str, oid: int):
-        name = await self.get_coin_name(coin)
-        cancel_req: CancelOrderRequest = {"coin": name, "oid": int(oid)}
+        cancel_req: CancelOrderRequest = {"coin": coin, "oid": int(oid)}
         return await self.cancel_orders([cancel_req])
 
     async def batch_cancel_orders(self, cancels: BatchCancelRequest):
-        reqs = []
-        for coin, oid in cancels:
-            coin_name = await self.get_coin_name(coin)
-            req = {"coin": coin_name, "oid": int(oid)}
-            reqs.append(req)
+        reqs: list = [{"coin": c[0], "oid": int(c[1])} for c in cancels]
         return await self.cancel_orders(reqs)
 
     async def cancel_orders(
