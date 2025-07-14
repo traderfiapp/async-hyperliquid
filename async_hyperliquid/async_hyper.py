@@ -75,20 +75,14 @@ class AsyncHyper(AsyncAPI):
             base_info = self.metas["spots"]["tokens"][base]
             quote_info = self.metas["spots"]["tokens"][quote]
             base_name = base_info["name"]
-            if base_name not in self.coin_names:
-                self.coin_names[base_name] = asset_info["name"]
-
             quote_name = quote_info["name"]
             name = f"{base_name}/{quote_name}"
             if name not in self.coin_names:
                 self.coin_names[name] = asset_info["name"]
 
-            # Specific for UBTC
-            ubtc_name = f"BTC/{quote_name}"
-            if base_name == "UBTC" and ubtc_name not in self.coin_names:
-                self.coin_names[ubtc_name] = asset_info["name"]
-
-        # USDC is the stable coin, it's a measure of value, always $1
+        self.coin_symbols = {
+            v: k for k, v in self.coin_names.items() if not k.startswith("@")
+        }
 
     def _init_asset_sz_decimals(self) -> None:
         self.asset_sz_decimals = {}
@@ -147,13 +141,6 @@ class AsyncHyper(AsyncAPI):
         return self.coin_assets[coin_name]
 
     async def get_coin_symbol(self, coin: str) -> str:
-        if not hasattr(self, "coin_symbols") or not self.coin_symbols:
-            await self.init_metas()
-            self.coin_symbols = {
-                v: k
-                for k, v in self.coin_names.items()
-                if not k.startswith("@")
-            }
         coin_name = await self.get_coin_name(coin)
         return self.coin_symbols[coin_name]
 

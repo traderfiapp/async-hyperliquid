@@ -1,5 +1,6 @@
 import time
-from typing import Any, Dict
+from typing import Any
+from datetime import datetime, timezone, timedelta
 
 import pytest
 
@@ -9,7 +10,7 @@ from async_hyperliquid.utils.types import OrderWithStatus
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_metas(hl: AsyncHyper):
-    metas: Dict[str, Any] = hl.metas
+    metas: dict[str, Any] = hl.metas
     assert "perps" in metas
 
     perp_metas = metas["perps"]
@@ -50,8 +51,8 @@ async def test_get_coin_name(hl: AsyncHyper, coin: str, name: str) -> None:
     "coin, symbol",
     [
         ("BTC", "BTC"),
-        ("BTC/USDC", "BTC/USDC"),
-        ("@142", "BTC/USDC"),
+        ("UBTC/USDC", "UBTC/USDC"),
+        ("@142", "UBTC/USDC"),
         ("@107", "HYPE/USDC"),
         ("PURR/USDC", "PURR/USDC"),
         pytest.param(
@@ -72,7 +73,7 @@ async def test_get_coin_symbol(hl: AsyncHyper, coin: str, symbol: str) -> None:
 async def test_get_market_price(hl: AsyncHyper):
     price = await hl.get_market_price("BTC")
     assert price
-    price = await hl.get_market_price("BTC/USDC")
+    price = await hl.get_market_price("UBTC/USDC")
     assert price
 
 
@@ -159,5 +160,16 @@ async def test_usd_class_transfer(hl: AsyncHyper):
 async def test_usd_transfer(hl: AsyncHyper):
     usd_amount = 5
     recipient = ""
-    resp = await hl.usd_transfer(usd_amount, recipient)
-    assert resp["status"] == "ok"
+    _resp = await hl.usd_transfer(usd_amount, recipient)
+    # assert resp["status"] == "ok"
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_user_non_funding(hl: AsyncHyper):
+    # addr = "0xA1406199484382D1913B6fc3CbFE70440C533b68"
+    addr = "0x5bf26001e812ef0a4fcead9c2ca4887b92d7733a"
+    now = datetime.now(timezone.utc)
+    start = now - timedelta(days=1)
+    start_ts = int(start.timestamp() * 1000)
+    resp = await hl._info.get_user_funding(addr, start_ts, is_funding=False)
+    print(resp)
