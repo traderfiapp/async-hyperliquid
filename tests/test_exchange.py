@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 
 from async_hyperliquid.async_hyper import AsyncHyper
@@ -8,7 +10,8 @@ from async_hyperliquid.utils.types import Cloid, LimitOrder
 async def test_update_leverage(hl: AsyncHyper):
     leverage = 10
     coin = "BTC"
-    resp: dict = await hl.update_leverage(leverage, coin)
+    resp = await hl.update_leverage(leverage, coin)
+    print(resp)
     assert resp["status"] == "ok"
 
 
@@ -28,13 +31,15 @@ async def test_spot_order(hl: AsyncHyper):
         "order_type": LimitOrder.ALO.value,
     }
 
-    resp: dict = await hl.place_order(**order_req)
+    resp = await hl.place_order(**order_req)
+    print(resp)
     assert resp["status"] == "ok"
 
     oid = resp["response"]["data"]["statuses"][0]["resting"]["oid"]
     assert oid
 
     resp = await hl.cancel_order(coin, oid)
+    print(resp)
     assert resp["status"] == "ok"
     assert resp["response"]["data"]["statuses"][0] == "success"
 
@@ -53,14 +58,15 @@ async def test_perp_order(hl: AsyncHyper):
         "order_type": LimitOrder.ALO.value,
     }
 
-    resp: dict = await hl.place_order(**order_req)
-    assert resp["status"] == "ok"
+    resp = await hl.place_order(**order_req)
     print(resp)
+    assert resp["status"] == "ok"
 
     oid = resp["response"]["data"]["statuses"][0]["resting"]["oid"]
     assert oid
 
     resp = await hl.cancel_order(coin, oid)
+    print(resp)
     assert resp["status"] == "ok"
     assert resp["response"]["data"]["statuses"][0] == "success"
 
@@ -82,6 +88,7 @@ async def test_update_isolated_margin(hl: AsyncHyper):
         "order_type": LimitOrder.GTC.value,
     }
     res = await hl.place_order(**order_req)
+    print(res)
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -173,6 +180,7 @@ async def test_modify_order(hl: AsyncHyper):
     resp = await hl.place_order(**payload, is_market=False)
     print(resp)
     assert resp["status"] == "ok"
+    assert resp["response"]["type"] == "order"
 
     oid = resp["response"]["data"]["statuses"][0]["resting"]["oid"]
 
@@ -188,6 +196,7 @@ async def test_modify_order(hl: AsyncHyper):
     resp = await hl.modify_order(**payload)
     print(resp)
     assert resp["status"] == "ok"
+    assert resp["response"]["type"] == "order"
     order_info = resp["response"]["data"]["statuses"][0]["resting"]
     assert "oid" in order_info
     ret_oid = order_info["oid"]
@@ -196,3 +205,37 @@ async def test_modify_order(hl: AsyncHyper):
     assert "cloid" in order_info
     ret_cloid = order_info["cloid"]
     assert ret_cloid == cloid.to_raw()
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_twap_order(hl: AsyncHyper):
+    coin = "BTC"
+    is_buy = False
+    sz = 0.005
+    ro = False
+    minutes = 5
+    randomize = False
+
+    # place twap
+    resp = await hl.place_twap(coin, is_buy, sz, minutes, ro, randomize)
+    print(resp)
+    assert resp["status"] == "ok"
+    assert resp["response"]["type"] == "twapOrder"
+
+    twap_id = resp["response"]["data"]["status"]["running"]["twapId"]
+    assert twap_id > 0
+
+    # sleep for one minute to get clear results
+    print("Sleeping one minute to cancel twap and close all positions")
+    await asyncio.sleep(60)
+
+    # cancel twap
+    resp = await hl.cancel_twap(coin, twap_id)
+    print(resp)
+    assert resp["status"] == "ok"
+    assert resp["response"]["type"] == "twapCancel"
+    assert resp["response"]["data"]["status"]["success"]
+
+    # close all positions
+    resp = await hl.close_all_positions()
+    print(resp)

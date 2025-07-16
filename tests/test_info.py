@@ -166,7 +166,6 @@ async def test_usd_transfer(hl: AsyncHyper):
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_user_non_funding(hl: AsyncHyper):
-    # addr = "0xA1406199484382D1913B6fc3CbFE70440C533b68"
     addr = "0x5bf26001e812ef0a4fcead9c2ca4887b92d7733a"
     now = datetime.now(timezone.utc)
     start = now - timedelta(days=1)

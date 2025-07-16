@@ -29,16 +29,14 @@ poetry add async-hyperliquid
 ```python
 import asyncio
 import os
-from async_hyperliquid import AsyncHyper
+from async_hyperliquid.async_hyper import AsyncHyper
 
 async def main():
     # Initialize the client
     address = os.getenv("HYPER_ADDRESS")
     api_key = os.getenv("HYPER_API_KEY")
-    client = AsyncHyper(address, api_key, is_mainnet=True)
-
-    # Initialize metadata (required before making other calls)
-    await client.init_metas()
+    # Test on testnet
+    client = AsyncHyper(address, api_key, is_mainnet=False)
 
     # Place a market order
     response = await client.place_order(
@@ -58,39 +56,38 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
+Or if you perfer context way:
+
+```python
+import asyncio
+import os
+from async_hyperliquid.async_hyper import AsyncHyper
+
+async def main():
+    # Initialize the client
+    address = os.getenv("HYPER_ADDRESS")
+    api_key = os.getenv("HYPER_API_KEY")
+    # Test on testnet
+    async with AsyncHyper(address, api_key, is_mannet=False) as client:
+        # place an market order open a BTC Long position
+        resp = await client.place_order(coin="BTC", is_buy=True, sz=0.0001, px=0, is_market=True)
+        print(resp)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+```
+
+For detailed usage, please check the test cases under `test/` directory.
+
 ## Environment Variables
 
 Create a `.env.local` file with the following variables:
 
 ```
 HYPER_ADDRESS=your_ethereum_address
-HYPER_API_KEY=your_ethereum_private_key
+HYPER_API_KEY=your_ethereum_private_key or api key generate hyperliquid website
 ```
-
-## API Reference
-
-### AsyncHyper
-
-The main client class that provides methods for interacting with the Hyperliquid API.
-
-#### Initialization
-
-```python
-client = AsyncHyper(address, api_key, is_mainnet=True)
-```
-
-#### Methods
-
-- `init_metas()`: Initialize metadata (required before using other methods)
-- `update_leverage(leverage, coin, is_cross=True)`: Update leverage for a specific coin
-- `place_order(coin, is_buy, sz, px, is_market=True, **kwargs)`: Place a single order
-- `place_orders(orders, builder=None)`: Place multiple orders at once
-
-### Additional Modules
-
-- `InfoAPI`: Access market information endpoints
-- `ExchangeAPI`: Access exchange operation endpoints
-- `utils`: Various utility functions and constants
 
 ## Testing
 
@@ -111,7 +108,3 @@ MIT
 ## Acknowledgements
 
 This library is a community-developed project and is not officially affiliated with Hyperliquid.
-
-## TODO
-
-See the TODO.md file for upcoming features and improvements.

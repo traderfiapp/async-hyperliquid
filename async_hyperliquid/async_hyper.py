@@ -626,3 +626,39 @@ class AsyncHyper(AsyncAPI):
             leverages[coin] = leverage
 
         return leverages
+
+    async def place_twap(
+        self,
+        coin: str,
+        is_buy: bool,
+        sz: float,
+        minutes: int,
+        ro: bool = False,
+        randomize: bool = False,
+        *,
+        vault: str | None = None,
+        expires: int | None = None,
+    ):
+        asset, sz, _ = await self._round_sz_px(coin, sz, 0)
+        action = {
+            "type": "twapOrder",
+            "twap": {
+                "a": asset,
+                "b": is_buy,
+                "s": str(sz),
+                "r": ro,
+                "m": minutes,
+                "t": randomize,
+            },
+        }
+        return await self._exchange.post_action(
+            action, vault=vault, expires=expires
+        )
+
+    async def cancel_twap(self, coin: str, twap_id: int):
+        action = {
+            "type": "twapCancel",
+            "a": await self.get_coin_asset(coin),
+            "t": twap_id,
+        }
+        return await self._exchange.post_action(action)
