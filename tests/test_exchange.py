@@ -1,6 +1,7 @@
 import pytest
 
-from async_hyperliquid.async_hyper import AsyncHyper, LimitOrder
+from async_hyperliquid.async_hyper import AsyncHyper
+from async_hyperliquid.utils.types import Cloid, LimitOrder
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -150,3 +151,48 @@ async def test_batch_place_orders(hl: AsyncHyper):
     resp = await hl.batch_cancel_orders(cancels)
     print("Batch cancel orders response: ", resp)
     assert resp["status"] == "ok"
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_modify_order(hl: AsyncHyper):
+    cloid = Cloid.from_str("0x00000000000000000000000000000001")
+    coin = "BTC"
+    px = 120_000
+    sz = 0.0001
+    order_type = LimitOrder.ALO.value
+
+    payload = {
+        "coin": coin,
+        "is_buy": False,
+        "sz": sz,
+        "px": px,
+        "ro": False,
+        "order_type": LimitOrder.GTC.value,
+    }
+
+    resp = await hl.place_order(**payload, is_market=False)
+    print(resp)
+    assert resp["status"] == "ok"
+
+    oid = resp["response"]["data"]["statuses"][0]["resting"]["oid"]
+
+    # increase $1 for order px, set tif to "ALO" and set cloid
+    px = px + 1
+    payload = {
+        **payload,
+        "oid": oid,
+        "px": px,
+        "cloid": cloid,
+        "order_type": order_type,
+    }
+    resp = await hl.modify_order(**payload)
+    print(resp)
+    assert resp["status"] == "ok"
+    order_info = resp["response"]["data"]["statuses"][0]["resting"]
+    assert "oid" in order_info
+    ret_oid = order_info["oid"]
+    assert ret_oid != oid
+
+    assert "cloid" in order_info
+    ret_cloid = order_info["cloid"]
+    assert ret_cloid == cloid.to_raw()

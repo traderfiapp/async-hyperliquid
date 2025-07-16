@@ -474,7 +474,9 @@ class AsyncHyper(AsyncAPI):
             "cancels": [
                 {
                     "a": await self.get_coin_asset(order["coin"]),
-                    "o": order["oid"],
+                    "o": order["oid"].to_raw()
+                    if isinstance(order["oid"], Cloid)
+                    else order["oid"],
                 }
                 for order in orders
             ],
@@ -487,13 +489,44 @@ class AsyncHyper(AsyncAPI):
             action, vault=vault, expires=expires
         )
 
-    async def cancel_orders_by_cloid(self):
-        # TODO: implement cancel orders by cloid
-        raise Exception("Not implement yet.")
+    async def modify_order(
+        self,
+        oid: int | Cloid,
+        coin: str,
+        is_buy: bool,
+        sz: float,
+        px: float,
+        ro: bool,
+        order_type: OrderType,
+        cloid: Cloid | None = None,
+    ):
+        asset, sz, px = await self._round_sz_px(coin, sz, px)
+        modify = {
+            "oid": oid,
+            "order": {
+                "asset": asset,
+                "is_buy": is_buy,
+                "sz": sz,
+                "px": px,
+                "ro": ro,
+                "order_type": order_type,
+                "cloid": cloid,
+            },
+        }
+        return await self.batch_modify_orders([modify])
 
-    async def modify_order(self):
-        # TODO: implement modify order
-        raise Exception("Not implement yet.")
+    async def batch_modify_orders(self, modify_req: list):
+        modifies = [
+            {
+                "oid": m["oid"].to_raw()
+                if isinstance(m["oid"], Cloid)
+                else m["oid"],
+                "order": encode_order(m["order"]),
+            }
+            for m in modify_req
+        ]
+        action = {"type": "batchModify", "modifies": modifies}
+        return await self._exchange.post_action(action)
 
     async def set_referrer_code(self, code: str):
         action = {"type": "setReferrer", "code": code}
