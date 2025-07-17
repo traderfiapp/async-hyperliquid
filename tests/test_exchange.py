@@ -234,7 +234,7 @@ async def test_twap_order(hl: AsyncHyper):
     print(resp)
     assert resp["status"] == "ok"
     assert resp["response"]["type"] == "twapCancel"
-    assert resp["response"]["data"]["status"]["success"]
+    assert resp["response"]["data"]["status"] == "success"
 
     # close all positions
     resp = await hl.close_all_positions()

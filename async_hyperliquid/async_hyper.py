@@ -22,7 +22,6 @@ from async_hyperliquid.utils.types import (
     OrderWithStatus,
     PlaceOrderRequest,
     BatchCancelRequest,
-    CancelOrderRequest,
     ClearinghouseState,
     UserNonFundingDelta,
     BatchPlaceOrderRequest,
@@ -454,17 +453,30 @@ class AsyncHyper(AsyncAPI):
             reqs.append(req)
         return reqs
 
-    async def cancel_order(self, coin: str, oid: int):
-        cancel_req: CancelOrderRequest = {"coin": coin, "oid": int(oid)}
-        return await self.cancel_orders([cancel_req])
+    async def cancel_order(
+        self,
+        coin: str,
+        oid: int,
+        *,
+        vault: str | None = None,
+        expires: int | None = None,
+    ):
+        return await self.cancel_orders(
+            [(coin, int(oid))], vault=vault, expires=expires
+        )
 
-    async def batch_cancel_orders(self, cancels: BatchCancelRequest):
-        reqs: list = [{"coin": c[0], "oid": int(c[1])} for c in cancels]
-        return await self.cancel_orders(reqs)
+    async def batch_cancel_orders(
+        self,
+        cancels: BatchCancelRequest,
+        *,
+        vault: str | None = None,
+        expires: int | None = None,
+    ):
+        return await self.cancel_orders(cancels, vault=vault, expires=expires)
 
     async def cancel_orders(
         self,
-        orders: list[CancelOrderRequest],
+        cancels: BatchCancelRequest,
         *,
         vault: str | None = None,
         expires: int | None = None,
@@ -472,16 +484,47 @@ class AsyncHyper(AsyncAPI):
         action = {
             "type": "cancel",
             "cancels": [
-                {
-                    "a": await self.get_coin_asset(order["coin"]),
-                    "o": order["oid"].to_raw()
-                    if isinstance(order["oid"], Cloid)
-                    else order["oid"],
-                }
-                for order in orders
+                {"a": await self.get_coin_asset(coin), "o": oid}
+                for coin, oid in cancels
             ],
         }
 
+        if vault is None:
+            vault = self.vault
+
+        return await self._exchange.post_action(
+            action, vault=vault, expires=expires
+        )
+
+    async def cancel_by_cloid(
+        self,
+        coin: str,
+        cloid: Cloid,
+        *,
+        vault: str | None = None,
+        expires: int | None = None,
+    ):
+        return await self.batch_cancel_by_cloid(
+            [(coin, cloid)], vault=vault, expires=expires
+        )
+
+    async def batch_cancel_by_cloid(
+        self,
+        cancels: list[tuple[str, Cloid]],
+        *,
+        vault: str | None = None,
+        expires: int | None = None,
+    ):
+        action = {
+            "type": "cancelByCloid",
+            "cancels": [
+                {
+                    "asset": await self.get_coin_asset(coin),
+                    "cloid": cloid.to_raw(),
+                }
+                for coin, cloid in cancels
+            ],
+        }
         if vault is None:
             vault = self.vault
 
