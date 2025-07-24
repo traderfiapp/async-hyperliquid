@@ -683,12 +683,13 @@ class AsyncHyper(AsyncAPI):
         expires: int | None = None,
     ):
         asset, sz, _ = await self._round_sz_px(coin, sz, 0)
+        sz_str = str(sz).rstrip("0").rstrip(".")
         action = {
             "type": "twapOrder",
             "twap": {
                 "a": asset,
                 "b": is_buy,
-                "s": str(sz),
+                "s": sz_str,
                 "r": ro,
                 "m": minutes,
                 "t": randomize,
