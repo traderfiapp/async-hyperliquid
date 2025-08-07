@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.3] - 2025-08-07
 
+### Added
+- Support to enable/disable EVM big block for HyperEVM smart contract deploy (2025-08-05)
+
 ### Changed
 - Refactor: Change project layout from 'flat layout' to 'src layout' (2025-08-07)
 - Integrate `uv` and add Hyperliquid EVM client (2025-08-07)
@@ -51,7 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.19] - 2025-06-29
 
 ### Added
-- Comprehensive place_order function (2025-06-29)
+- Support place TP/SL orders in place_order (2025-06-29)
 - Add batch_place_orders to aggregate multiple orders into one request (2025-06-29)
 - Add batch_cancel_orders to make cancels more efficient (2025-06-29)
 - Use batch_place_orders in close_all_positions (2025-06-29)

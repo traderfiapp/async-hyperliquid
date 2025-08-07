@@ -209,12 +209,6 @@ async def test_modify_order(hl: AsyncHyper):
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_twap_order(hl: AsyncHyper):
-    # coin = "BTC"
-    # is_buy = False
-    # sz = 0.005
-    # ro = False
-    # minutes = 5
-    # randomize = False
     coin = "kBONK"
     is_buy = True
     sz = 32451
