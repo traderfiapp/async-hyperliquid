@@ -172,6 +172,8 @@ HYPER_API_KEY=your_ethereum_private_key or api key generate hyperliquid website
 Tests use pytest and pytest-asyncio. To run tests:
 
 ```bash
+uv pip install -e .
+
 # Run all tests
 pytest
 
