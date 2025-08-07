@@ -30,7 +30,7 @@ Homepage = "https://github.com/oneforalone/async-hyperliquid"
 Documentation = "https://github.com/oneforalone/async-hyperliquid"
 Repository = "https://github.com/oneforalone/async-hyperliquid"
 Issues = "https://github.com/oneforalone/async-hyperliquid/issues"
-# Changelog = "https://github.com/oneforalone/async-hyperliquid/blob/master/CHANGELOG.md"
+Changelog = "https://github.com/oneforalone/async-hyperliquid/blob/master/CHANGELOG.md"
 
 
 [build-system]

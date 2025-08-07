@@ -22,6 +22,9 @@ pip install async-hyperliquid
 
 # Using Poetry
 poetry add async-hyperliquid
+
+# Using uv
+uv add async-hyperliquid
 ```
 
 ## Quick Start
