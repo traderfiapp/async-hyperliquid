@@ -4,6 +4,8 @@ version = "0.2.3"
 description = "Async Hyperliquid client using aiohttp"
 authors = [{ name = "Yuki", email = "oneforalone@proton.me" }]
 readme = "README.md"
+license = { file = "LICENSE" }
+keywords = ["DEX", "hyperliquid", "async", "aiohttp"]
 requires-python = ">=3.10,<4"
 dependencies = [
     "aiohttp (>=3.11.12,<4.0.0)",
@@ -30,21 +32,23 @@ Repository = "https://github.com/oneforalone/async-hyperliquid"
 Issues = "https://github.com/oneforalone/async-hyperliquid/issues"
 # Changelog = "https://github.com/oneforalone/async-hyperliquid/blob/master/CHANGELOG.md"
 
-[tool.poetry]
-packages = [{ include = "async_hyperliquid" }]
-
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.3.5"
-pytest-asyncio = "^0.25.3"
-pytest-ruff = "^0.4.1"
-pytest-cov = "^6.0.0"
-pre-commit = "^4.1.0"
-python-dotenv = "^1.0.1"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+requires-poetry = ">=2.0"
+packages = [{ include = "async_hyperliquid", from = "src" }]
+
+#[build-system]
+#requires = ["uv_build>=0.7.11,<0.8.0"]
+#build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "async_hyperliquid"
+src-layout = true
+
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
