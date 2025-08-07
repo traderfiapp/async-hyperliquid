@@ -2,10 +2,10 @@ from typing import Any, List
 from decimal import Decimal
 
 import msgpack
-from eth_account import Account
 from eth_utils.crypto import keccak
 from eth_account.messages import encode_typed_data
 from eth_utils.conversions import to_hex
+from eth_account.signers.local import LocalAccount
 
 from async_hyperliquid.utils.types import (
     OrderType,
@@ -38,7 +38,7 @@ def hash_action(action, vault, nonce) -> bytes:
     return keccak(data)
 
 
-def sign_inner(wallet: Account, data: dict) -> SignedAction:
+def sign_inner(wallet: LocalAccount, data: dict) -> SignedAction:
     encodes = encode_typed_data(full_message=data)
     signed = wallet.sign_message(encodes)
     return {
@@ -49,7 +49,7 @@ def sign_inner(wallet: Account, data: dict) -> SignedAction:
 
 
 def sign_action(
-    wallet: Account,
+    wallet: LocalAccount,
     action: dict,
     active_pool: str | None,
     nonce: int,
@@ -165,7 +165,7 @@ def user_signed_payload(primary_type, payload_types, action):
 
 
 def sign_user_signed_action(
-    wallet: Account,
+    wallet: LocalAccount,
     action: dict,
     payload_types: List[dict],
     primary_type: str,
@@ -177,7 +177,7 @@ def sign_user_signed_action(
     return sign_inner(wallet, data)
 
 
-def sign_usd_transfer_action(wallet: Account, action, is_mainnet: bool):
+def sign_usd_transfer_action(wallet: LocalAccount, action, is_mainnet: bool):
     return sign_user_signed_action(
         wallet,
         action,
@@ -188,7 +188,7 @@ def sign_usd_transfer_action(wallet: Account, action, is_mainnet: bool):
 
 
 def sign_usd_class_transfer_action(
-    wallet: Account, action: Any, is_mainnet: bool
+    wallet: LocalAccount, action: Any, is_mainnet: bool
 ):
     return sign_user_signed_action(
         wallet,

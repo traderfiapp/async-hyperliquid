@@ -1,7 +1,7 @@
 from typing import Any
 
 from aiohttp import ClientSession
-from eth_account import Account
+from eth_account.signers.local import LocalAccount
 
 from async_hyperliquid.async_api import AsyncAPI
 from async_hyperliquid.utils.miscs import get_timestamp_ms
@@ -13,7 +13,7 @@ from async_hyperliquid.utils.constants import MAINNET_API_URL
 class ExchangeAPI(AsyncAPI):
     def __init__(
         self,
-        account: Account,
+        account: LocalAccount,
         session: ClientSession,
         base_url: str | None = None,
         address: str | None = None,

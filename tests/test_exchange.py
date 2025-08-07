@@ -244,3 +244,9 @@ async def test_twap_order(hl: AsyncHyper):
     # close all positions
     resp = await hl.close_all_positions()
     print(resp)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_use_big_block(hl: AsyncHyper):
+    resp = await hl.use_big_block(True)
+    print(resp)

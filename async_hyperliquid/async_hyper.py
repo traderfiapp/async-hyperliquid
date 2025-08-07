@@ -3,7 +3,13 @@ from typing import Any, Literal
 
 from aiohttp import ClientSession, ClientTimeout
 from eth_account import Account
+from hl_web3.info import Info as EVMInfo
+from hl_web3.exchange import Exchange as EVMExchange
+from hl_web3.utils.constants import HL_RPC_URL, HL_TESTNET_RPC_URL
+from eth_account.signers.local import LocalAccount
 
+from async_hyperliquid.info import InfoAPI
+from async_hyperliquid.exchange import ExchangeAPI
 from async_hyperliquid.async_api import AsyncAPI
 from async_hyperliquid.utils.miscs import (
     round_px,
@@ -27,7 +33,6 @@ from async_hyperliquid.utils.types import (
     BatchPlaceOrderRequest,
     SpotClearinghouseState,
 )
-from async_hyperliquid.info_endpoint import InfoAPI
 from async_hyperliquid.utils.signing import (
     encode_order,
     orders_to_action,
@@ -35,11 +40,30 @@ from async_hyperliquid.utils.signing import (
     sign_usd_class_transfer_action,
 )
 from async_hyperliquid.utils.constants import MAINNET_API_URL, TESTNET_API_URL
-from async_hyperliquid.exchange_endpoint import ExchangeAPI
 
 
 class AsyncHyper(AsyncAPI):
-    def __init__(self, address: str, api_key: str, is_mainnet: bool = True):
+    address: str
+    is_mainnet: bool
+    account: LocalAccount
+    session: ClientSession
+    base_url: str
+    metas: dict[str, Any]
+    vault: str | None
+
+    enable_evm: bool
+    evm_info: EVMInfo
+    evm_exchange: EVMExchange
+
+    def __init__(
+        self,
+        address: str,
+        api_key: str,
+        is_mainnet: bool = True,
+        enable_evm: bool = False,
+        evm_rpc_url: str | None = None,
+        private_key: str | None = None,
+    ):
         self.address = address
         self.is_mainnet = is_mainnet
         self.account = Account.from_key(api_key)
@@ -49,9 +73,29 @@ class AsyncHyper(AsyncAPI):
         self._exchange = ExchangeAPI(
             self.account, self.session, self.base_url, address=self.address
         )
-        self.metas: dict[str, Any] = {}
-        # TODO: figure out the vault address
-        self.vault: str | None = None
+        self.metas = {}
+        self.vault = None
+
+        if enable_evm:
+            self._init_evm_client(private_key, evm_rpc_url)
+
+    def _init_evm_client(
+        self, private_key: str | None, rpc_url: str | None = None
+    ):
+        if rpc_url is None:
+            rpc_url = HL_RPC_URL if self.is_mainnet else HL_TESTNET_RPC_URL
+
+        self.evm_info = EVMInfo(rpc_url)
+
+        if private_key is None:
+            if self.account.address != self.address:
+                raise ValueError(
+                    "EVM Exchange client can not init without private key"
+                )
+            else:
+                private_key = self.account.key.hex()
+
+        self.evm_exchange = EVMExchange(rpc_url, private_key)
 
     def _init_coin_assets(self) -> None:
         self.coin_assets = {}
@@ -187,14 +231,14 @@ class AsyncHyper(AsyncAPI):
                 and (is_perp or is_all)
                 and isinstance(perp_data, list)
             ):  # perp or all
-                prices[coin] = float(perp_data[1][asset]["markPx"])
+                prices[coin] = float(perp_data[1][asset]["markPx"])  # type: ignore
             if (
                 asset >= 10_000
                 and (is_spot or is_all)
                 and isinstance(spot_data, list)
             ):  # spot or all
                 asset -= 10_000
-                prices[coin] = float(spot_data[1][asset]["markPx"])
+                prices[coin] = float(spot_data[1][asset]["markPx"])  # type: ignore
         return prices
 
     async def get_perp_account_state(
@@ -558,7 +602,7 @@ class AsyncHyper(AsyncAPI):
         }
         return await self.batch_modify_orders([modify])
 
-    async def batch_modify_orders(self, modify_req: list):
+    async def batch_modify_orders(self, modify_req: list[dict]):
         modifies = [
             {
                 "oid": m["oid"].to_raw()
@@ -705,4 +749,8 @@ class AsyncHyper(AsyncAPI):
             "a": await self.get_coin_asset(coin),
             "t": twap_id,
         }
+        return await self._exchange.post_action(action)
+
+    async def use_big_block(self, enable: bool):
+        action = {"type": "evmUserModify", "usingBigBlocks": enable}
         return await self._exchange.post_action(action)
