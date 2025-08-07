@@ -5,7 +5,26 @@ description = "Async Hyperliquid client using aiohttp"
 authors = [{ name = "Yuki", email = "oneforalone@proton.me" }]
 readme = "README.md"
 license = { file = "LICENSE" }
-keywords = ["DEX", "hyperliquid", "async", "aiohttp"]
+keywords = ["dex", "hyperliquid", "async", "aiohttp", "trading", "cryptocurrency", "defi"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Framework :: AsyncIO",
+    "Framework :: aiohttp",
+    "Typing :: Typed",
+]
 requires-python = ">=3.10,<4"
 dependencies = [
     "aiohttp (>=3.11.12,<4.0.0)",
