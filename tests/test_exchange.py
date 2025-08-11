@@ -304,16 +304,18 @@ async def test_vault_transfer(hl: AsyncHyper):
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_staking_deposit(hl: AsyncHyper):
-    pass
-    # amount = 0.01
-    # resp = await hl.staking_deposit(amount)
-    # print(resp)
-    # assert resp["status"] == "ok"
+    amount = 0.01
+    resp = await hl.staking_deposit(amount)
+    print(resp)
+    assert resp["status"] == "ok"
 
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_staking_withdraw(hl: AsyncHyper):
-    pass
+    amount = 0.01
+    resp = await hl.staking_withdraw(amount)
+    print(resp)
+    assert resp["status"] == "ok"
 
 
 @pytest.mark.asyncio(loop_scope="session")

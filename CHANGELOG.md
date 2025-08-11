@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.4] - 2025-08-11
 
 ### Added
-- Support transfer between accounts, classes(perp and spot) and vaults
+- Support transfer between accounts
+- Support transfer between perpetual and spot
+- Support transfer between perpetual and vaults
+- Support transfer HYPE between spot and staking
 - Support withdraw
 - Support token delegation
 - Support approve agent wallet (api wallet)

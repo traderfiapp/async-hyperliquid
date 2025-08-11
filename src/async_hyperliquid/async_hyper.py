@@ -39,10 +39,17 @@ from async_hyperliquid.utils.signing import (
     sign_approve_agent_action,
     sign_spot_transfer_action,
     sign_token_delegate_action,
+    sign_staking_deposit_action,
+    sign_staking_withdraw_action,
     sign_usd_class_transfer_action,
     sign_approve_builder_fee_action,
 )
-from async_hyperliquid.utils.constants import MAINNET_API_URL, TESTNET_API_URL
+from async_hyperliquid.utils.constants import (
+    USD_FACTOR,
+    HYPE_FACTOR,
+    MAINNET_API_URL,
+    TESTNET_API_URL,
+)
 
 
 class AsyncHyper(AsyncAPI):
@@ -646,7 +653,7 @@ class AsyncHyper(AsyncAPI):
         vault: str | None = None,
         expires: int | None = None,
     ):
-        usd_in_units = usd * 10**6
+        usd_in_units = usd * USD_FACTOR
         if abs(round(usd_in_units) - usd_in_units) >= 1e-3:
             raise ValueError(
                 f"USD amount precision error: Value {usd} cannot be accurately"
@@ -754,16 +761,26 @@ class AsyncHyper(AsyncAPI):
         return await self._exchange.post_action_with_sig(action, sig, nonce)
 
     async def staking_deposit(self, amount: float):
-        raise NotImplementedError("Not implemented")
+        amount_in_wei = int(math.floor(amount * HYPE_FACTOR))
+        nonce = get_timestamp_ms()
+        action = {"type": "cDeposit", "wei": amount_in_wei, "nonce": nonce}
+        sig = sign_staking_deposit_action(self.account, action, self.is_mainnet)
+        return await self._exchange.post_action_with_sig(action, sig, nonce)
 
     async def staking_withdraw(self, amount: float):
-        raise NotImplementedError("Not implemented")
+        amount_in_wei = int(math.floor(amount * HYPE_FACTOR))
+        nonce = get_timestamp_ms()
+        action = {"type": "cWithdraw", "wei": amount_in_wei, "nonce": nonce}
+        sig = sign_staking_withdraw_action(
+            self.account, action, self.is_mainnet
+        )
+        return await self._exchange.post_action_with_sig(action, sig, nonce)
 
     async def token_delegate(
         self, validator: str, amount: float, is_undelegate: bool = False
     ):
         # HYPE decimals is 8
-        amount_in_wei = int(math.floor(amount * 10**8))
+        amount_in_wei = int(math.floor(amount * HYPE_FACTOR))
         nonce = get_timestamp_ms()
         action = {
             "type": "tokenDelegate",
@@ -778,7 +795,7 @@ class AsyncHyper(AsyncAPI):
     async def vault_transfer(
         self, vault: str, amount: float, is_deposit: bool = True
     ):
-        usd_amount = int(math.floor(amount * 10**6))
+        usd_amount = int(math.floor(amount * USD_FACTOR))
         action = {
             "type": "vaultTransfer",
             "vaultAddress": vault,

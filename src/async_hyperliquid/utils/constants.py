@@ -1,6 +1,9 @@
 MAINNET_API_URL = "https://api.hyperliquid.xyz"
 TESTNET_API_URL = "https://api.hyperliquid-testnet.xyz"
 
+USD_FACTOR = 10**6  # USD decimals is 6
+HYPE_FACTOR = 10**8  # HYPE decimals is 8
+
 USD_SEND_SIGN_TYPES = [
     {"name": "hyperliquidChain", "type": "string"},
     {"name": "destination", "type": "string"},
@@ -40,6 +43,13 @@ SEND_ASSET_SIGN_TYPES = [
     {"name": "fromSubAccount", "type": "string"},
     {"name": "nonce", "type": "uint64"},
 ]
+
+STAKING_TRANSFER_SIGN_TYPES = [
+    {"name": "hyperliquidChain", "type": "string"},
+    {"name": "wei", "type": "uint64"},
+    {"name": "nonce", "type": "uint64"},
+]
+
 
 TOKEN_DELEGATE_TYPES = [
     {"name": "hyperliquidChain", "type": "string"},

@@ -24,6 +24,7 @@ from async_hyperliquid.utils.constants import (
     SEND_ASSET_SIGN_TYPES,
     SPOT_TRANSFER_SIGN_TYPES,
     APPROVE_BUILDER_FEE_TYPES,
+    STAKING_TRANSFER_SIGN_TYPES,
     USD_CLASS_TRANSFER_SIGN_TYPES,
 )
 
@@ -243,6 +244,30 @@ def sign_send_asset_action(
         action,
         SEND_ASSET_SIGN_TYPES,
         "HyperliquidTransaction:SendAsset",
+        is_mainnet,
+    )
+
+
+def sign_staking_deposit_action(
+    wallet: LocalAccount, action: dict, is_mainnet: bool
+):
+    return sign_user_signed_action(
+        wallet,
+        action,
+        STAKING_TRANSFER_SIGN_TYPES,
+        "HyperliquidTransaction:CDeposit",
+        is_mainnet,
+    )
+
+
+def sign_staking_withdraw_action(
+    wallet: LocalAccount, action: dict, is_mainnet: bool
+):
+    return sign_user_signed_action(
+        wallet,
+        action,
+        STAKING_TRANSFER_SIGN_TYPES,
+        "HyperliquidTransaction:CWithdraw",
         is_mainnet,
     )
 
