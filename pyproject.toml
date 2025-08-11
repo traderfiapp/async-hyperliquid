@@ -1,6 +1,6 @@
 [project]
 name = "async-hyperliquid"
-version = "0.2.3"
+version = "0.2.4"
 description = "Async Hyperliquid client using aiohttp"
 authors = [{ name = "Yuki", email = "oneforalone@proton.me" }]
 readme = "README.md"
@@ -73,3 +73,6 @@ src-layout = true
 asyncio_mode = "auto"
 addopts = "--verbose --capture=no"
 asyncio_default_fixture_loop_scope = "session"
+filterwarnings = [
+    "ignore::DeprecationWarning"
+]

@@ -156,6 +156,9 @@ class FrontendOrder(Order):
     cloid: str | None
 
 
+UserOpenOrders = list[Order | FrontendOrder]
+
+
 class FilledOrder(TypedDict):
     coin: str
     sz: str
@@ -172,6 +175,9 @@ class FilledOrder(TypedDict):
     tid: int
     feeToken: str
     builderFee: str | None
+
+
+UserFills = list[FilledOrder]
 
 
 class OrderStatus(str, Enum):
@@ -211,6 +217,286 @@ class L2Book(TypedDict):
 class Depth(TypedDict):
     bids: list[L2Book]
     asks: list[L2Book]
+
+
+class CandleInterval(str, Enum):
+    OneMinute = "1m"
+    ThreeMinutes = "3m"
+    FiveMinutes = "5m"
+    FifteenMinutes = "15m"
+    ThirtyMinutes = "30m"
+    OneHour = "1h"
+    TwoHours = "4h"
+    FourHours = "1d"
+    EightHours = "8h"
+    TwelveHours = "12h"
+    OneDay = "1d"
+    ThreeDays = "3d"
+    OneWeek = "1w"
+    OneMonth = "1M"
+
+
+class Candle(TypedDict):
+    T: int
+    c: str
+    h: str
+    i: str
+    l: str  # noqa: E741
+    n: int
+    o: str
+    s: str
+    t: int
+    v: str
+
+
+Candles = list[Candle]
+
+
+class HistoricalOrder(TypedDict):
+    order: FrontendOrder
+    status: Literal[
+        "filled", "open", "canceled", "triggered", "rejected", "marginCanceled"
+    ]
+    statusTimestamp: int
+
+
+HistoricalOrders = list[HistoricalOrder]
+
+
+class TwapFill(TypedDict):
+    closedPnl: str
+    coin: str
+    crossed: bool
+    dir: str
+    hash: str
+    oid: int
+    px: str
+    side: Literal["A", "B"]
+    startPosition: str
+    sz: str
+    time: int
+    fee: str
+    feeToken: str
+    tid: int
+
+
+class TwapSliceFill(TypedDict):
+    fill: TwapFill
+    twapId: int
+
+
+TwapSliceFills = list[TwapSliceFill]
+
+
+class VaultDeposit(TypedDict):
+    vaultAddress: str
+    equity: str
+
+
+VaultDeposits = list[VaultDeposit]
+
+
+class UserRole(TypedDict):
+    role: Literal["missing", "user", "agent", "vault", "subAccount"]
+    data: NotRequired[dict[str, str]]
+
+
+class PortfolioMeta(TypedDict):
+    accountValueHistory: list[tuple[int, str]]
+    pnlHistory: list[tuple[int, str]]
+    vlm: str
+
+
+Portfolio = list[
+    tuple[
+        Literal[
+            "day",
+            "week",
+            "month",
+            "allTime",
+            "perpDay",
+            "perpWeek",
+            "perpMonth",
+            "perpAllTime",
+        ],
+        PortfolioMeta,
+    ]
+]
+
+
+class VaultFollower(TypedDict):
+    user: str
+    vaultEquity: str
+    pnl: str
+    allTimePnl: str
+    daysFollowing: int
+    vaultEntryTime: int
+    lockupUntil: int
+
+
+class VaultRelationshipData(TypedDict):
+    childAddresses: list[str]
+
+
+class VaultRelationship(TypedDict):
+    type: str
+    data: VaultRelationshipData
+
+
+class VaultInfo(TypedDict):
+    name: str
+    vaultAddress: str
+    leader: str
+    description: str
+    portfolio: Portfolio
+    apr: float
+    followerState: str | None
+    leaderFraction: float
+    leaderCommission: float
+    followers: list[VaultFollower]
+    maxDistributable: float
+    maxWithdrawable: float
+    isClosed: bool
+    relationship: VaultRelationship
+    allowDeposits: bool
+    alwaysCloseOnWithdraw: bool
+
+
+class ReferredBy(TypedDict):
+    referrer: str
+    code: str
+
+
+class ReferralState(TypedDict):
+    cumVlm: str
+    cumRewardedFeesSinceReferred: str
+    cumFeesRewardedToReferrer: str
+    timeJoined: int
+    user: str
+
+
+class ReferrerStateData(TypedDict):
+    code: str
+    referralStates: list[ReferralState]
+
+
+class referrerState(TypedDict):
+    stage: str
+    data: ReferrerStateData
+
+
+class Referral(TypedDict):
+    referredBy: ReferredBy
+    cumVlm: str
+    unclaimedRewards: str
+    claimedRewards: str
+    builderRewards: str
+    referrerState: referrerState
+    rewardHistory: list
+
+
+class DailyUserVlm(TypedDict):
+    date: str
+    userCross: str
+    userAdd: str
+    exchange: str
+
+
+class VipTier(TypedDict):
+    ntlCutoff: str
+    cross: str
+    add: str
+    spotCross: str
+    spotAdd: str
+
+
+class MMTier(TypedDict):
+    makerFractionCutoff: str
+    add: str
+
+
+class FeeScheduleTiers(TypedDict):
+    vip: list[VipTier]
+    mm: list[MMTier]
+
+
+class StakingDiscountTier(TypedDict):
+    bpsOfMaxSupply: str
+    discount: str
+
+
+class FeeSchedule(TypedDict):
+    cross: str
+    add: str
+    spotCross: str
+    spotAdd: str
+    tiers: FeeScheduleTiers
+    referralDiscount: str
+    stakingDiscount: list[StakingDiscountTier]
+
+
+class StakingLink(TypedDict):
+    type: str
+    stakingUser: str
+
+
+class UserFees(TypedDict):
+    dailyUserVlm: list[DailyUserVlm]
+    feeSchedule: FeeSchedule
+    userCrossRate: str
+    userAddRate: str
+    userSpotCrossRate: str
+    userSpotAddRate: str
+    activeReferralDiscount: str
+    trial: str | None
+    feeTrialReward: str
+    nextTrialAvailableTimestamp: int | None
+    stakingLink: StakingLink
+    activeStakingDiscount: StakingDiscountTier
+
+
+class Delegation(TypedDict):
+    validator: str
+    amount: str
+    lockedUntilTimestamp: int
+
+
+Delegations = list[Delegation]
+
+
+class StakingSummary(TypedDict):
+    delegated: str
+    undelegated: str
+    totalPendingWithdrawal: str
+    nPendingWithdrawals: int
+
+
+class StakingDeltaDelegate(TypedDict):
+    validator: str
+    amount: str
+    isUndelegate: bool
+
+
+class StakingDelta(TypedDict):
+    delegate: StakingDeltaDelegate
+
+
+class StakingItem(TypedDict):
+    time: int
+    hash: str
+    delta: StakingDelta
+
+
+StakingHistory = list[StakingItem]
+
+
+class StakingReward(TypedDict):
+    time: int
+    source: str  # delegation, commission
+    totalAmount: str
+
+
+StakingRewards = list[StakingReward]
 
 
 class PerpMeta(TypedDict):
@@ -345,11 +631,51 @@ class UserFunding(TypedDict):
     time: int
 
 
+UserFundings = list[UserFunding]
+
+
 class FundingRate(TypedDict):
     coin: str
     fundingRate: str
     premium: str
     time: int
+
+
+FundingRates = list[FundingRate]
+
+
+class FundingInfo(TypedDict):
+    fundingRate: str
+    nextFundingTime: int
+
+
+ExchangeFundingInfo = list[
+    tuple[Literal["BinPerp", "HlPerp", "BybitPerp"], FundingInfo]
+]
+
+AssetFundingInfo = list[tuple[str, ExchangeFundingInfo]]
+
+
+class PerpDeployStatus(TypedDict):
+    startTimeSeconds: int
+    durationSeconds: int
+    startGas: str
+    currentGas: str
+    endGas: str | None
+
+
+class Leverage(TypedDict):
+    type: Literal["cross", "isolated"]
+    value: int
+
+
+class ActiveAssetData(TypedDict):
+    user: str
+    coin: str
+    leverage: Leverage
+    maxTradeSzs: list[str]
+    availableToTrade: list[str]
+    markPx: str
 
 
 class Token(TypedDict):
@@ -455,3 +781,14 @@ class TokenDetails(TypedDict):
     seededUsdc: str
     nonCirculatingUserBalances: list[Any]
     futureEmissions: str
+
+
+class SubAccount(TypedDict):
+    name: str
+    subAccountUser: str
+    master: str
+    clearinghouseState: ClearinghouseState
+    spotState: SpotClearinghouseState
+
+
+SubAccounts = list[SubAccount]

@@ -17,7 +17,13 @@ from async_hyperliquid.utils.types import (
     PlaceOrderRequest,
 )
 from async_hyperliquid.utils.constants import (
+    APPROVE_AGENT_TYPES,
     USD_SEND_SIGN_TYPES,
+    WITHDRAW_SIGN_TYPES,
+    TOKEN_DELEGATE_TYPES,
+    SEND_ASSET_SIGN_TYPES,
+    SPOT_TRANSFER_SIGN_TYPES,
+    APPROVE_BUILDER_FEE_TYPES,
     USD_CLASS_TRANSFER_SIGN_TYPES,
 )
 
@@ -26,8 +32,10 @@ def address_to_bytes(address: str) -> bytes:
     return bytes.fromhex(address[2:] if address.startswith("0x") else address)
 
 
-def hash_action(action, vault, nonce) -> bytes:
-    data = msgpack.packb(action)
+def hash_action(
+    action: dict, vault: str | None, nonce: int, expires: int | None = None
+) -> bytes:
+    data: bytes = msgpack.packb(action)  # type: ignore
     data += nonce.to_bytes(8, "big")
 
     if vault is None:
@@ -35,6 +43,11 @@ def hash_action(action, vault, nonce) -> bytes:
     else:
         data += b"\x01"
         data += bytes.fromhex(vault.removeprefix("0x"))
+
+    if expires is not None:
+        data += b"\x00"
+        data += expires.to_bytes(8, "big")
+
     return keccak(data)
 
 
@@ -54,8 +67,9 @@ def sign_action(
     active_pool: str | None,
     nonce: int,
     is_mainnet: bool,
+    expires: int | None = None,
 ) -> SignedAction:
-    h = hash_action(action, active_pool, nonce)
+    h = hash_action(action, active_pool, nonce, expires)
     msg = {"source": "a" if is_mainnet else "b", "connectionId": h}
     data = {
         "domain": {
@@ -187,6 +201,28 @@ def sign_usd_transfer_action(wallet: LocalAccount, action, is_mainnet: bool):
     )
 
 
+def sign_spot_transfer_action(
+    wallet: LocalAccount, action: dict, is_mainnet: bool
+):
+    return sign_user_signed_action(
+        wallet,
+        action,
+        SPOT_TRANSFER_SIGN_TYPES,
+        "HyperliquidTransaction:SpotSend",
+        is_mainnet,
+    )
+
+
+def sign_withdraw_action(wallet: LocalAccount, action: dict, is_mainnet: bool):
+    return sign_user_signed_action(
+        wallet,
+        action,
+        WITHDRAW_SIGN_TYPES,
+        "HyperliquidTransaction:Withdraw",
+        is_mainnet,
+    )
+
+
 def sign_usd_class_transfer_action(
     wallet: LocalAccount, action: Any, is_mainnet: bool
 ):
@@ -195,5 +231,53 @@ def sign_usd_class_transfer_action(
         action,
         USD_CLASS_TRANSFER_SIGN_TYPES,
         "HyperliquidTransaction:UsdClassTransfer",
+        is_mainnet,
+    )
+
+
+def sign_send_asset_action(
+    wallet: LocalAccount, action: dict, is_mainnet: bool
+):
+    return sign_user_signed_action(
+        wallet,
+        action,
+        SEND_ASSET_SIGN_TYPES,
+        "HyperliquidTransaction:SendAsset",
+        is_mainnet,
+    )
+
+
+def sign_token_delegate_action(
+    wallet: LocalAccount, action: dict, is_mainnet: bool
+):
+    return sign_user_signed_action(
+        wallet,
+        action,
+        TOKEN_DELEGATE_TYPES,
+        "HyperliquidTransaction:TokenDelegate",
+        is_mainnet,
+    )
+
+
+def sign_approve_agent_action(
+    wallet: LocalAccount, action: dict, is_mainnet: bool
+):
+    return sign_user_signed_action(
+        wallet,
+        action,
+        APPROVE_AGENT_TYPES,
+        "HyperliquidTransaction:ApproveAgent",
+        is_mainnet,
+    )
+
+
+def sign_approve_builder_fee_action(
+    wallet: LocalAccount, action: dict, is_mainnet: bool
+):
+    return sign_user_signed_action(
+        wallet,
+        action,
+        APPROVE_BUILDER_FEE_TYPES,
+        "HyperliquidTransaction:ApproveBuilderFee",
         is_mainnet,
     )

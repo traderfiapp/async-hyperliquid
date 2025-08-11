@@ -243,4 +243,85 @@ async def test_twap_order(hl: AsyncHyper):
 @pytest.mark.asyncio(loop_scope="session")
 async def test_use_big_block(hl: AsyncHyper):
     resp = await hl.use_big_block(True)
+    print(resp, end=" ")
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_usd_transfer(hl: AsyncHyper):
+    # This action requires account private key
+    amount = 1.126
+    dest = ""  # Setup another account on testnet
+    resp = await hl.usd_transfer(amount, dest)
+    print(resp, end=" ")
+    assert resp["status"] == "ok"
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_spot_transfer(hl: AsyncHyper):
+    # This action requires account private key
+    coin = "HYPE/USDC"
+    amount = 0.000000016
+    dest = ""  # Setup another account on testnet
+    resp = await hl.spot_transfer(coin, amount, dest)
+    print(resp, end=" ")
+    assert resp["status"] == "ok"
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_withdraw(hl: AsyncHyper):
+    # This action requires account private key
+    amount = 12.126
+    resp = await hl.initiate_withdrawal(amount)
+    print(resp, end=" ")
+    assert resp["status"] == "ok"
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_usd_class_transfer(hl: AsyncHyper):
+    # This action requires account private key
+    amount = 10.356
+    to_perp = True
+    resp = await hl.usd_class_transfer(amount, to_perp)
     print(resp)
+    assert resp["status"] == "ok"
+    await asyncio.sleep(5)
+
+    to_perp = False
+    resp = await hl.usd_class_transfer(amount, to_perp)
+    print(resp)
+    assert resp["status"] == "ok"
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_vault_transfer(hl: AsyncHyper):
+    hlp = "0xa15099a30bbf2e68942d6f4c43d70d04faeab0a0"
+    amount = 10.123
+    is_deposit = True
+    resp = await hl.vault_transfer(hlp, amount, is_deposit)
+    print(resp)
+    assert resp["status"] == "ok"
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_staking_deposit(hl: AsyncHyper):
+    pass
+    # amount = 0.01
+    # resp = await hl.staking_deposit(amount)
+    # print(resp)
+    # assert resp["status"] == "ok"
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_staking_withdraw(hl: AsyncHyper):
+    pass
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_token_delegate(hl: AsyncHyper):
+    # This action requires account private key
+    validator = "0x4dbf394da4b348b88e8090d22051af83e4cbaef4"  # Hypurr3
+    amount = 0.01
+    is_undelegate = False
+    resp = await hl.token_delegate(validator, amount, is_undelegate)
+    print(resp)
+    assert resp["status"] == "ok"

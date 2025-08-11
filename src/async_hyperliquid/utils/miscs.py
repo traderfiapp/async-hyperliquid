@@ -1,3 +1,4 @@
+import math
 import time
 from typing import Any
 from decimal import Decimal
@@ -44,3 +45,9 @@ def round_px(px: float, decimals: int) -> float | int:
 def round_float(value: float, decimals: int) -> float:
     v = float(value)
     return round(float(f"{v:.8g}"), decimals)
+
+
+def round_token_amount(amount: float, decimals: int) -> str:
+    factor = 10**decimals
+    rounded = math.floor(amount * factor) / factor
+    return f"{rounded:.{decimals}f}".rstrip("0").rstrip(".")
