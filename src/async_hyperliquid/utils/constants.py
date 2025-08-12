@@ -8,6 +8,8 @@ ONE_HOUR_MS = 60 * 60 * 1000
 
 SPOT_ASSET_BASE = 10_000  # SPOT asset id starts from 10_000 in Hyperliquid
 
+SPOT_MARKET_OFFSET = 10_000  # SPOT market id starts from 10_000 in Hyperliquid
+
 SIGNATURE_CHAIN_ID = "0x66eee"
 
 USD_SEND_SIGN_TYPES = [

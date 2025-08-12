@@ -50,8 +50,8 @@ from async_hyperliquid.utils.constants import (
     HYPE_FACTOR,
     ONE_HOUR_MS,
     MAINNET_API_URL,
-    SPOT_ASSET_BASE,
     TESTNET_API_URL,
+    SPOT_MARKET_OFFSET,
 )
 from async_hyperliquid.utils.decorators import private_key_required
 
@@ -126,7 +126,7 @@ class AsyncHyper(AsyncAPI):
 
         for asset_info in self.metas["spots"]["universe"]:
             asset_name = asset_info["name"]
-            asset = asset_info["index"] + SPOT_ASSET_BASE
+            asset = asset_info["index"] + SPOT_MARKET_OFFSET
             self.coin_assets[asset_name] = asset
             token_idx = asset_info["tokens"][0]
             self.spot_tokens[asset_name] = self.metas["spots"]["tokens"][
@@ -160,7 +160,7 @@ class AsyncHyper(AsyncAPI):
             self.asset_sz_decimals[asset] = asset_info["szDecimals"]
 
         for asset_info in self.metas["spots"]["universe"]:
-            asset = asset_info["index"] + SPOT_ASSET_BASE
+            asset = asset_info["index"] + SPOT_MARKET_OFFSET
             base, _quote = asset_info["tokens"]
             base_info = self.metas["spots"]["tokens"][base]
             self.asset_sz_decimals[asset] = base_info["szDecimals"]
@@ -365,7 +365,7 @@ class AsyncHyper(AsyncAPI):
             px = float(all_mids[coin_name])
 
         asset = await self.get_coin_asset(coin)
-        is_spot = asset >= SPOT_ASSET_BASE
+        is_spot = asset >= SPOT_MARKET_OFFSET
         sz_decimals = await self.get_coin_sz_decimals(coin)
         px *= (1 + slippage) if is_buy else (1 - slippage)
         px_decimals = (6 if not is_spot else 8) - sz_decimals
@@ -373,7 +373,7 @@ class AsyncHyper(AsyncAPI):
 
     async def _round_sz_px(self, coin: str, sz: float, px: float):
         asset = await self.get_coin_asset(coin)
-        is_spot = asset >= SPOT_ASSET_BASE
+        is_spot = asset >= SPOT_MARKET_OFFSET
         sz_decimals = await self.get_coin_sz_decimals(coin)
         px_decimals = (6 if not is_spot else 8) - sz_decimals
         return asset, round_float(sz, sz_decimals), round_px(px, px_decimals)
