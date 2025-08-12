@@ -12,3 +12,6 @@ __pycache__/
 
 dist/
 build/
+
+# local test file
+tests/test_local.py

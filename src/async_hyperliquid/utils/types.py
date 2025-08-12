@@ -792,3 +792,8 @@ class SubAccount(TypedDict):
 
 
 SubAccounts = list[SubAccount]
+
+
+class SignType(str, Enum):
+    SINGLE_SIG = "singleSig"
+    MULTI_SIG = "multiSig"

@@ -17,6 +17,7 @@ from async_hyperliquid.utils.types import (
     PlaceOrderRequest,
 )
 from async_hyperliquid.utils.constants import (
+    SIGNATURE_CHAIN_ID,
     APPROVE_AGENT_TYPES,
     USD_SEND_SIGN_TYPES,
     WITHDRAW_SIGN_TYPES,
@@ -25,7 +26,9 @@ from async_hyperliquid.utils.constants import (
     SPOT_TRANSFER_SIGN_TYPES,
     APPROVE_BUILDER_FEE_TYPES,
     STAKING_TRANSFER_SIGN_TYPES,
+    MULTI_SIG_ENVELOPE_SIGN_TYPES,
     USD_CLASS_TRANSFER_SIGN_TYPES,
+    CONVERT_TO_MULTI_SIG_USER_SIGN_TYPES,
 )
 
 
@@ -186,7 +189,7 @@ def sign_user_signed_action(
     primary_type: str,
     is_mainnet: bool,
 ):
-    action["signatureChainId"] = "0x66eee"
+    action["signatureChainId"] = SIGNATURE_CHAIN_ID
     action["hyperliquidChain"] = "Mainnet" if is_mainnet else "Testnet"
     data = user_signed_payload(primary_type, payload_types, action)
     return sign_inner(wallet, data)
@@ -304,5 +307,40 @@ def sign_approve_builder_fee_action(
         action,
         APPROVE_BUILDER_FEE_TYPES,
         "HyperliquidTransaction:ApproveBuilderFee",
+        is_mainnet,
+    )
+
+
+def sign_convert_to_multi_sig_user_action(
+    wallet: LocalAccount, action: dict, is_mainnet: bool
+):
+    return sign_user_signed_action(
+        wallet,
+        action,
+        CONVERT_TO_MULTI_SIG_USER_SIGN_TYPES,
+        "HyperliquidTransaction:ConvertToMultiSigUser",
+        is_mainnet,
+    )
+
+
+def sign_multi_sig_action(
+    wallet: LocalAccount,
+    action: dict,
+    is_mainnet: bool,
+    vault: str | None,
+    nonce: int,
+    expires: int | None = None,
+):
+    action_without_type = action.copy()
+    del action_without_type["type"]
+
+    h = hash_action(action_without_type, vault, nonce, expires)
+
+    envelope = {"multiSigActionHash": h, "nonce": nonce}
+    return sign_user_signed_action(
+        wallet,
+        envelope,
+        MULTI_SIG_ENVELOPE_SIGN_TYPES,
+        "HyperliquidTransaction:SendMultiSig",
         is_mainnet,
     )

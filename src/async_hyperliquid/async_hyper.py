@@ -43,13 +43,17 @@ from async_hyperliquid.utils.signing import (
     sign_staking_withdraw_action,
     sign_usd_class_transfer_action,
     sign_approve_builder_fee_action,
+    sign_convert_to_multi_sig_user_action,
 )
 from async_hyperliquid.utils.constants import (
     USD_FACTOR,
     HYPE_FACTOR,
+    ONE_HOUR_MS,
     MAINNET_API_URL,
+    SPOT_ASSET_BASE,
     TESTNET_API_URL,
 )
+from async_hyperliquid.utils.decorators import private_key_required
 
 
 class AsyncHyper(AsyncAPI):
@@ -122,7 +126,7 @@ class AsyncHyper(AsyncAPI):
 
         for asset_info in self.metas["spots"]["universe"]:
             asset_name = asset_info["name"]
-            asset = asset_info["index"] + 10_000
+            asset = asset_info["index"] + SPOT_ASSET_BASE
             self.coin_assets[asset_name] = asset
             token_idx = asset_info["tokens"][0]
             self.spot_tokens[asset_name] = self.metas["spots"]["tokens"][
@@ -156,7 +160,7 @@ class AsyncHyper(AsyncAPI):
             self.asset_sz_decimals[asset] = asset_info["szDecimals"]
 
         for asset_info in self.metas["spots"]["universe"]:
-            asset = asset_info["index"] + 10_000
+            asset = asset_info["index"] + SPOT_ASSET_BASE
             base, _quote = asset_info["tokens"]
             base_info = self.metas["spots"]["tokens"][base]
             self.asset_sz_decimals[asset] = base_info["szDecimals"]
@@ -300,7 +304,7 @@ class AsyncHyper(AsyncAPI):
     ):
         if not start_time:
             now = get_timestamp_ms()
-            one_hour = 60 * 60 * 1000  # one hour in millis
+            one_hour = ONE_HOUR_MS
             start_time = now - one_hour
         if not address:
             address = self.address
@@ -317,7 +321,7 @@ class AsyncHyper(AsyncAPI):
     ):
         return await self.get_latest_ledgers(
             "deposit", address, start_time, end_time
-        )  # type: ignore
+        )
 
     async def get_latest_withdraws(
         self,
@@ -327,7 +331,7 @@ class AsyncHyper(AsyncAPI):
     ):
         return await self.get_latest_ledgers(
             "withdraw", address, start_time, end_time
-        )  # type: ignore
+        )
 
     async def get_latest_transfers(
         self,
@@ -337,7 +341,7 @@ class AsyncHyper(AsyncAPI):
     ):
         return await self.get_latest_ledgers(
             "accountClassTransfer", address, start_time, end_time
-        )  # type: ignore
+        )
 
     async def get_user_open_orders(
         self, address: str | None = None, is_frontend: bool = False
@@ -361,7 +365,7 @@ class AsyncHyper(AsyncAPI):
             px = float(all_mids[coin_name])
 
         asset = await self.get_coin_asset(coin)
-        is_spot = asset >= 10_000
+        is_spot = asset >= SPOT_ASSET_BASE
         sz_decimals = await self.get_coin_sz_decimals(coin)
         px *= (1 + slippage) if is_buy else (1 - slippage)
         px_decimals = (6 if not is_spot else 8) - sz_decimals
@@ -369,7 +373,7 @@ class AsyncHyper(AsyncAPI):
 
     async def _round_sz_px(self, coin: str, sz: float, px: float):
         asset = await self.get_coin_asset(coin)
-        is_spot = asset >= 10_000
+        is_spot = asset >= SPOT_ASSET_BASE
         sz_decimals = await self.get_coin_sz_decimals(coin)
         px_decimals = (6 if not is_spot else 8) - sz_decimals
         return asset, round_float(sz, sz_decimals), round_px(px, px_decimals)
@@ -674,8 +678,8 @@ class AsyncHyper(AsyncAPI):
         action = {"type": "setReferrer", "code": code}
         return await self._exchange.post_action(action)
 
+    @private_key_required
     async def usd_transfer(self, amount: float, dest: str):
-        # Note: This action requires account private key
         nonce = get_timestamp_ms()
         action = {
             "type": "usdSend",
@@ -687,8 +691,8 @@ class AsyncHyper(AsyncAPI):
         sig = sign_usd_transfer_action(self.account, action, is_mainnet)
         return await self._exchange.post_action_with_sig(action, sig, nonce)
 
+    @private_key_required
     async def spot_transfer(self, coin: str, amount: float, dest: str):
-        # Note: This action requires account private key
         token_info = await self.get_token_info(coin)
         token_name = token_info["name"]
         token_id = token_info["tokenId"]
@@ -705,8 +709,8 @@ class AsyncHyper(AsyncAPI):
         sig = sign_spot_transfer_action(self.account, action, self.is_mainnet)
         return await self._exchange.post_action_with_sig(action, sig, nonce)
 
+    @private_key_required
     async def initiate_withdrawal(self, amount: float):
-        # Note: This action requires account private key
         nonce = get_timestamp_ms()
         action = {
             "type": "withdraw3",
@@ -717,8 +721,8 @@ class AsyncHyper(AsyncAPI):
         sig = sign_withdraw_action(self.account, action, self.is_mainnet)
         return await self._exchange.post_action_with_sig(action, sig, nonce)
 
+    @private_key_required
     async def usd_class_transfer(self, amount: float, to_perp: bool = False):
-        # Note: This action requires account private key
         nonce = get_timestamp_ms()
         action = {
             "type": "usdClassTransfer",
@@ -731,6 +735,7 @@ class AsyncHyper(AsyncAPI):
         )
         return await self._exchange.post_action_with_sig(action, sig, nonce)
 
+    @private_key_required
     async def send_asset(
         self,
         coin: str,
@@ -740,7 +745,6 @@ class AsyncHyper(AsyncAPI):
         dest_dex: str,
         sub_account: str = "",
     ):
-        # Note: This action requires account private key
         token_info = await self.get_token_info(coin)
         token_name = token_info["name"]
         token_id = token_info["tokenId"]
@@ -760,6 +764,7 @@ class AsyncHyper(AsyncAPI):
         sig = sign_send_asset_action(self.account, action, self.is_mainnet)
         return await self._exchange.post_action_with_sig(action, sig, nonce)
 
+    @private_key_required
     async def staking_deposit(self, amount: float):
         amount_in_wei = int(math.floor(amount * HYPE_FACTOR))
         nonce = get_timestamp_ms()
@@ -767,6 +772,7 @@ class AsyncHyper(AsyncAPI):
         sig = sign_staking_deposit_action(self.account, action, self.is_mainnet)
         return await self._exchange.post_action_with_sig(action, sig, nonce)
 
+    @private_key_required
     async def staking_withdraw(self, amount: float):
         amount_in_wei = int(math.floor(amount * HYPE_FACTOR))
         nonce = get_timestamp_ms()
@@ -776,6 +782,7 @@ class AsyncHyper(AsyncAPI):
         )
         return await self._exchange.post_action_with_sig(action, sig, nonce)
 
+    @private_key_required
     async def token_delegate(
         self, validator: str, amount: float, is_undelegate: bool = False
     ):
@@ -792,6 +799,7 @@ class AsyncHyper(AsyncAPI):
         sig = sign_token_delegate_action(self.account, action, self.is_mainnet)
         return await self._exchange.post_action_with_sig(action, sig, nonce)
 
+    @private_key_required
     async def vault_transfer(
         self, vault: str, amount: float, is_deposit: bool = True
     ):
@@ -867,6 +875,19 @@ class AsyncHyper(AsyncAPI):
             "t": twap_id,
         }
         return await self._exchange.post_action(action)
+
+    async def convert_to_multi_sig_user(self, users: list[str], threshold: int):
+        nonce = get_timestamp_ms()
+        signers = {"authorizedUsers": sorted(users), "threshold": threshold}
+        action = {
+            "type": "convertToMultiSigUser",
+            "signers": signers,
+            "nonce": nonce,
+        }
+        sig = sign_convert_to_multi_sig_user_action(
+            self.account, action, self.is_mainnet
+        )
+        return await self._exchange.post_action_with_sig(action, sig, nonce)
 
     async def reserve_request_weight(
         self, weight: int, *, expires: int | None = None

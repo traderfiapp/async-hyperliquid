@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support withdraw
 - Support token delegation
 - Support approve agent wallet (api wallet)
+- Support convert single user to multi-sig user
 
 
 ## [0.2.3] - 2025-08-07

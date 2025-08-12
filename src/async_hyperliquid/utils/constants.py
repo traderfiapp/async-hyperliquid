@@ -4,6 +4,12 @@ TESTNET_API_URL = "https://api.hyperliquid-testnet.xyz"
 USD_FACTOR = 10**6  # USD decimals is 6
 HYPE_FACTOR = 10**8  # HYPE decimals is 8
 
+ONE_HOUR_MS = 60 * 60 * 1000
+
+SPOT_ASSET_BASE = 10_000  # SPOT asset id starts from 10_000 in Hyperliquid
+
+SIGNATURE_CHAIN_ID = "0x66eee"
+
 USD_SEND_SIGN_TYPES = [
     {"name": "hyperliquidChain", "type": "string"},
     {"name": "destination", "type": "string"},
