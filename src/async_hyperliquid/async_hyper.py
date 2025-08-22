@@ -175,23 +175,11 @@ class AsyncHyper(AsyncAPI):
         return {"perps": perp_meta, "spots": spot_meta}
 
     async def init_metas(self):
-        if not hasattr(self, "metas") or not self.metas:
-            self.metas = await self.get_metas()
-
-        if not self.metas.get("perps") or not self.metas["perps"]:
-            self.metas["perps"] = await self._info.get_perp_meta()
-
-        if not self.metas.get("spots") or not self.metas["spots"]:
-            self.metas["spots"] = await self._info.get_spot_meta()
-
-        if not hasattr(self, "coin_assets") or not self.coin_assets:
-            self._init_coin_assets()
-
-        if not hasattr(self, "coin_names") or not self.coin_names:
-            self._init_coin_names()
-
-        if not hasattr(self, "asset_sz_decimals") or not self.asset_sz_decimals:
-            self._init_asset_sz_decimals()
+        self.metas = await self.get_metas()
+        # TODO: Support for HIP-3, i.e. different DEX
+        self._init_coin_assets()
+        self._init_coin_names()
+        self._init_asset_sz_decimals()
 
     async def get_coin_name(self, coin: str):
         if not hasattr(self, "coin_names") or coin not in self.coin_names:
