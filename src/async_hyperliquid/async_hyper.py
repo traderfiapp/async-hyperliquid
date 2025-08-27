@@ -377,7 +377,7 @@ class AsyncHyper(AsyncAPI):
         ro: bool = False,
         order_type: OrderType = LimitOrder.IOC.value,  # type: ignore
         cloid: Cloid | None = None,
-        slippage: float = 0.01,  # Default slippage is 1%
+        slippage: float = 0.05,  # Default slippage is 5%
         builder: OrderBuilder | None = None,
     ):
         if is_market:
@@ -426,7 +426,7 @@ class AsyncHyper(AsyncAPI):
         *,
         grouping: GroupOptions = "na",
         is_market: bool = False,
-        slippage: float = 0.01,  # Default slippage is 1%
+        slippage: float = 0.05,  # Default slippage is 5%
         builder: OrderBuilder | None = None,
         vault: str | None = None,
         expires: int | None = None,
@@ -453,7 +453,7 @@ class AsyncHyper(AsyncAPI):
     async def _get_batch_market_orders(
         self,
         orders: BatchPlaceOrderRequest,
-        slippage: float = 0.01,  # Default slippage is 1%
+        slippage: float = 0.05,  # Default slippage is 5%
     ):
         reqs = []
         market_prices = await self.get_all_market_prices()
