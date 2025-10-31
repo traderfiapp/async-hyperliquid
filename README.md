@@ -6,6 +6,10 @@ An asynchronous Python client for interacting with the Hyperliquid API using `ai
 
 This library provides an easy-to-use asynchronous interface for the Hyperliquid cryptocurrency exchange, supporting both mainnet and testnet environments. It handles API interactions, request signing, and data processing for both perpetual futures and spot trading.
 
+Compared with the [Hyperliquid Python SDK](https://github.com/hyperliquid-dex/hyperliquid-python-sdk), Async Hyperliquid shows a significant performance improvement. The specific benchmark results are as follows.
+
+![benchmark](https://github.com/traderfiapp/async-hyperliquid/blob/main/benchmarks/benchmarks.png)
+
 ## Features
 
 - Asynchronous API communication using `aiohttp`
