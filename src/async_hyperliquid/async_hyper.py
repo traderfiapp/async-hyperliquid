@@ -82,6 +82,7 @@ class AsyncHyper(AsyncAPI):
         enable_evm: bool = False,
         evm_rpc_url: str | None = None,
         private_key: str | None = None,
+        vault: str | None = None,
     ):
         self.address = address
         self.is_mainnet = is_mainnet
@@ -94,10 +95,15 @@ class AsyncHyper(AsyncAPI):
         )
         self.metas = {}
         self.spot_tokens = {}
-        self.vault = None
+        self.vault = vault
+        # expires will cause actions to be rejected after that timestamp in milliseconds
+        self.expires: int | None = None
 
         if enable_evm:
             self._init_evm_client(private_key, evm_rpc_url)
+
+    def set_expires(self, expires: int | None) -> None:
+        self.expires = expires
 
     def _init_evm_client(
         self, private_key: str | None, rpc_url: str | None = None
@@ -406,8 +412,6 @@ class AsyncHyper(AsyncAPI):
         orders: list[PlaceOrderRequest],
         grouping: GroupOptions = "na",
         builder: OrderBuilder | None = None,
-        vault: str | None = None,
-        expires: int | None = None,
     ):
         encoded_orders = [encode_order(o) for o in orders]
 
@@ -417,7 +421,7 @@ class AsyncHyper(AsyncAPI):
         action = orders_to_action(encoded_orders, grouping, builder)
 
         return await self._exchange.post_action(
-            action, vault=vault, expires=expires
+            action, vault=self.vault, expires=self.expires
         )
 
     async def batch_place_orders(
@@ -428,8 +432,6 @@ class AsyncHyper(AsyncAPI):
         is_market: bool = False,
         slippage: float = 0.05,  # Default slippage is 5%
         builder: OrderBuilder | None = None,
-        vault: str | None = None,
-        expires: int | None = None,
     ):
         reqs = []
         if is_market:
@@ -442,13 +444,7 @@ class AsyncHyper(AsyncAPI):
                 req = {**o, "asset": asset, "sz": sz, "px": px}
                 reqs.append(req)
 
-        return await self.place_orders(
-            reqs,
-            grouping=grouping,
-            builder=builder,
-            vault=vault,
-            expires=expires,
-        )
+        return await self.place_orders(reqs, grouping=grouping, builder=builder)
 
     async def _get_batch_market_orders(
         self,
@@ -474,34 +470,13 @@ class AsyncHyper(AsyncAPI):
             reqs.append(req)
         return reqs
 
-    async def cancel_order(
-        self,
-        coin: str,
-        oid: int,
-        *,
-        vault: str | None = None,
-        expires: int | None = None,
-    ):
-        return await self.cancel_orders(
-            [(coin, int(oid))], vault=vault, expires=expires
-        )
+    async def cancel_order(self, coin: str, oid: int):
+        return await self.cancel_orders([(coin, int(oid))])
 
-    async def batch_cancel_orders(
-        self,
-        cancels: BatchCancelRequest,
-        *,
-        vault: str | None = None,
-        expires: int | None = None,
-    ):
-        return await self.cancel_orders(cancels, vault=vault, expires=expires)
+    async def batch_cancel_orders(self, cancels: BatchCancelRequest):
+        return await self.cancel_orders(cancels)
 
-    async def cancel_orders(
-        self,
-        cancels: BatchCancelRequest,
-        *,
-        vault: str | None = None,
-        expires: int | None = None,
-    ):
+    async def cancel_orders(self, cancels: BatchCancelRequest):
         action = {
             "type": "cancel",
             "cancels": [
@@ -510,32 +485,14 @@ class AsyncHyper(AsyncAPI):
             ],
         }
 
-        if vault is None:
-            vault = self.vault
-
         return await self._exchange.post_action(
-            action, vault=vault, expires=expires
+            action, vault=self.vault, expires=self.expires
         )
 
-    async def cancel_by_cloid(
-        self,
-        coin: str,
-        cloid: Cloid,
-        *,
-        vault: str | None = None,
-        expires: int | None = None,
-    ):
-        return await self.batch_cancel_by_cloid(
-            [(coin, cloid)], vault=vault, expires=expires
-        )
+    async def cancel_by_cloid(self, coin: str, cloid: Cloid):
+        return await self.batch_cancel_by_cloid([(coin, cloid)])
 
-    async def batch_cancel_by_cloid(
-        self,
-        cancels: list[tuple[str, Cloid]],
-        *,
-        vault: str | None = None,
-        expires: int | None = None,
-    ):
+    async def batch_cancel_by_cloid(self, cancels: list[tuple[str, Cloid]]):
         action = {
             "type": "cancelByCloid",
             "cancels": [
@@ -546,23 +503,15 @@ class AsyncHyper(AsyncAPI):
                 for coin, cloid in cancels
             ],
         }
-        if vault is None:
-            vault = self.vault
 
         return await self._exchange.post_action(
-            action, vault=vault, expires=expires
+            action, vault=self.vault, expires=self.expires
         )
 
-    async def schedule_cancel(
-        self,
-        time: int | None = None,
-        *,
-        vault: str | None = None,
-        expires: int | None = None,
-    ):
+    async def schedule_cancel(self, time: int | None = None):
         action = {"type": "scheduleCancel", "time": time}
         return await self._exchange.post_action(
-            action, vault=vault, expires=expires
+            action, vault=self.vault, expires=self.expires
         )
 
     async def modify_order(
@@ -575,9 +524,6 @@ class AsyncHyper(AsyncAPI):
         ro: bool,
         order_type: OrderType,
         cloid: Cloid | None = None,
-        *,
-        vault: str | None = None,
-        expires: int | None = None,
     ):
         asset, sz, px = await self._round_sz_px(coin, sz, px)
         modify = {
@@ -592,17 +538,9 @@ class AsyncHyper(AsyncAPI):
                 "cloid": cloid,
             },
         }
-        return await self.batch_modify_orders(
-            [modify], vault=vault, expires=expires
-        )
+        return await self.batch_modify_orders([modify])
 
-    async def batch_modify_orders(
-        self,
-        modify_req: list[dict],
-        *,
-        vault: str | None = None,
-        expires: int | None = None,
-    ):
+    async def batch_modify_orders(self, modify_req: list[dict]):
         modifies = [
             {
                 "oid": m["oid"].to_raw()
@@ -614,17 +552,11 @@ class AsyncHyper(AsyncAPI):
         ]
         action = {"type": "batchModify", "modifies": modifies}
         return await self._exchange.post_action(
-            action, vault=vault, expires=expires
+            action, vault=self.vault, expires=self.expires
         )
 
     async def update_leverage(
-        self,
-        leverage: int,
-        coin: str,
-        is_cross: bool = True,
-        *,
-        vault: str | None = None,
-        expires: int | None = None,
+        self, leverage: int, coin: str, is_cross: bool = True
     ):
         action = {
             "type": "updateLeverage",
@@ -634,17 +566,10 @@ class AsyncHyper(AsyncAPI):
         }
 
         return await self._exchange.post_action(
-            action, vault=vault, expires=expires
+            action, vault=self.vault, expires=self.expires
         )
 
-    async def update_isolated_margin(
-        self,
-        usd: float,
-        coin: str,
-        *,
-        vault: str | None = None,
-        expires: int | None = None,
-    ):
+    async def update_isolated_margin(self, usd: float, coin: str):
         usd_in_units = usd * USD_FACTOR
         if abs(round(usd_in_units) - usd_in_units) >= 1e-3:
             raise ValueError(
@@ -659,7 +584,7 @@ class AsyncHyper(AsyncAPI):
         }
 
         return await self._exchange.post_action(
-            action, vault=vault, expires=expires
+            action, vault=self.vault, expires=self.expires
         )
 
     async def set_referrer_code(self, code: str):
@@ -835,9 +760,6 @@ class AsyncHyper(AsyncAPI):
         minutes: int,
         ro: bool = False,
         randomize: bool = False,
-        *,
-        vault: str | None = None,
-        expires: int | None = None,
     ):
         asset, sz, _ = await self._round_sz_px(coin, sz, 0)
         sz_str = str(sz).rstrip("0").rstrip(".")
@@ -853,7 +775,7 @@ class AsyncHyper(AsyncAPI):
             },
         }
         return await self._exchange.post_action(
-            action, vault=vault, expires=expires
+            action, vault=self.vault, expires=self.expires
         )
 
     async def cancel_twap(self, coin: str, twap_id: int):
@@ -877,11 +799,9 @@ class AsyncHyper(AsyncAPI):
         )
         return await self._exchange.post_action_with_sig(action, sig, nonce)
 
-    async def reserve_request_weight(
-        self, weight: int, *, expires: int | None = None
-    ):
+    async def reserve_request_weight(self, weight: int):
         action = {"type": "reserveRequestWeight", "weight": weight}
-        return await self._exchange.post_action(action, expires=expires)
+        return await self._exchange.post_action(action, expires=self.expires)
 
     async def use_big_block(self, enable: bool):
         action = {"type": "evmUserModify", "usingBigBlocks": enable}

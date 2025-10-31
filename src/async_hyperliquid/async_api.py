@@ -8,6 +8,8 @@ from aiohttp import ClientSession
 from async_hyperliquid.utils.types import Endpoint
 from async_hyperliquid.utils.constants import MAINNET_API_URL
 
+logger = logging.getLogger(__name__)
+
 
 class AsyncAPI:
     def __init__(
@@ -19,7 +21,6 @@ class AsyncAPI:
         self.endpoint = endpoint
         self.base_url = base_url or MAINNET_API_URL
         self.session = session
-        self.logger = logging.getLogger(__name__)
 
     # for async with AsyncAPI() as api usage
     async def __aenter__(self) -> "AsyncAPI":
@@ -40,11 +41,11 @@ class AsyncAPI:
     async def post(self, payloads: dict | None = None) -> Any:
         payloads = payloads or {}
         req_path = f"{self.base_url}/{self.endpoint.value}"
-        self.logger.debug(f"POST {req_path} {payloads}")
+        logger.debug(f"POST {req_path} {payloads}")
         async with self.session.post(req_path, json=payloads) as resp:
             resp.raise_for_status()
             try:
                 return await resp.json()
             except Exception as e:
-                self.logger.error(f"Error parsing JSON response: {e}")
+                logger.error(f"Error parsing JSON response: {e}")
                 return await resp.text()

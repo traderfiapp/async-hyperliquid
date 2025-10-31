@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 from aiohttp import ClientSession
@@ -11,6 +12,8 @@ from async_hyperliquid.utils.constants import (
     MAINNET_API_URL,
     SIGNATURE_CHAIN_ID,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ExchangeAPI(AsyncAPI):
@@ -81,9 +84,9 @@ class ExchangeAPI(AsyncAPI):
         expires: int | None = None,
     ) -> Any:
         payloads = {"action": action, "nonce": nonce, "signature": sig}
-        if vault:
+        if vault and action["type"] not in ["usdClassTransfer", "sendAsset"]:
             payloads["vaultAddress"] = vault
         if expires:
             payloads["expiresAfter"] = expires
-        self.logger.debug(f"Post action payloads: {payloads}")
+        logger.debug(f"Post action payloads: {payloads}")
         return await self.post(payloads)
