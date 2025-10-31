@@ -1,11 +1,19 @@
 [project]
 name = "async-hyperliquid"
-version = "0.2.5"
+version = "0.2.6"
 description = "Async Hyperliquid client using aiohttp"
-authors = [{ name = "Yuki", email = "oneforalone@proton.me" }]
+authors = [{ name = "Yuki", email = "yuqi.lyle@gmail.com" }]
 readme = "README.md"
 license = { file = "LICENSE" }
-keywords = ["dex", "hyperliquid", "async", "aiohttp", "trading", "cryptocurrency", "defi"]
+keywords = [
+    "dex",
+    "hyperliquid",
+    "async",
+    "aiohttp",
+    "trading",
+    "cryptocurrency",
+    "defi",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -32,10 +40,15 @@ dependencies = [
     "eth-account (>=0.13.5,<0.14.0)",
     "eth-utils (>=5.2.0,<6.0.0)",
     "hl-web3>=0.1.0",
-    "hyperliquid-python-sdk>=0.20.0",
 ]
 
 [dependency-groups]
+bench = [
+    "matplotlib>=3.10.6",
+    "numpy>=2.2.6",
+    "pandas>=2.3.2",
+    "seaborn>=0.13.2",
+]
 dev = [
     "pytest>=8.3.5",
     "pytest-asyncio>=0.25.3",
@@ -43,27 +56,28 @@ dev = [
     "pytest-cov>=6.0.0",
     "pre-commit>=4.1.0",
     "python-dotenv>=1.0.1",
+    "hyperliquid-python-sdk>=0.19.0",
 ]
 
 [project.urls]
-Homepage = "https://github.com/oneforalone/async-hyperliquid"
-Documentation = "https://github.com/oneforalone/async-hyperliquid"
-Repository = "https://github.com/oneforalone/async-hyperliquid"
-Issues = "https://github.com/oneforalone/async-hyperliquid/issues"
-Changelog = "https://github.com/oneforalone/async-hyperliquid/blob/master/CHANGELOG.md"
+Homepage = "https://github.com/traderfiapp/async-hyperliquid"
+Documentation = "https://github.com/traderfiapp/async-hyperliquid"
+Repository = "https://github.com/traderfiapp/async-hyperliquid"
+Issues = "https://github.com/traderfiapp/async-hyperliquid/issues"
+Changelog = "https://github.com/traderfiapp/async-hyperliquid/blob/master/CHANGELOG.md"
 
 
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+#[build-system]
+#requires = ["poetry-core>=2.0.0,<3.0.0"]
+#build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 requires-poetry = ">=2.0"
 packages = [{ include = "async_hyperliquid", from = "src" }]
 
-#[build-system]
-#requires = ["uv_build>=0.7.11,<0.8.0"]
-#build-backend = "uv_build"
+[build-system]
+requires = ["uv_build>=0.7.11,<0.8.0"]
+build-backend = "uv_build"
 
 [tool.uv.build-backend]
 module-name = "async_hyperliquid"
@@ -74,6 +88,4 @@ src-layout = true
 asyncio_mode = "auto"
 addopts = "--verbose --capture=no"
 asyncio_default_fixture_loop_scope = "session"
-filterwarnings = [
-    "ignore::DeprecationWarning"
-]
+filterwarnings = ["ignore::DeprecationWarning"]
