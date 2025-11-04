@@ -592,6 +592,11 @@ class AsyncHyper(AsyncAPI):
         return await self._exchange.post_action(action)
 
     @private_key_required
+    async def create_sub_account(self, name: str):
+        action = {"type": "createSubAccount", "name": name}
+        return await self._exchange.post_action(action)
+
+    @private_key_required
     async def usd_transfer(self, amount: float, dest: str):
         nonce = get_timestamp_ms()
         action = {
