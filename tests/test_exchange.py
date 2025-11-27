@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from async_hyperliquid.async_hyper import AsyncHyper
+from async_hyperliquid.async_hyperliquid import AsyncHyper
 from async_hyperliquid.utils.types import Cloid, LimitOrder
 
 

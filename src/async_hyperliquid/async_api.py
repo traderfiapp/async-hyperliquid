@@ -38,11 +38,11 @@ class AsyncAPI:
         if self.session and not self.session.closed:
             await self.session.close()
 
-    async def post(self, payloads: dict | None = None) -> Any:
-        payloads = payloads or {}
+    async def post(self, payload: dict | None = None) -> Any:
+        payload = payload or {}
         req_path = f"{self.base_url}/{self.endpoint.value}"
-        logger.debug(f"POST {req_path} {payloads}")
-        async with self.session.post(req_path, json=payloads) as resp:
+        logger.debug(f"POST {req_path} {payload}")
+        async with self.session.post(req_path, json=payload) as resp:
             resp.raise_for_status()
             try:
                 return await resp.json()

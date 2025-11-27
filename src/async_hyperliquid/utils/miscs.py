@@ -51,3 +51,7 @@ def round_token_amount(amount: float, decimals: int) -> str:
     factor = 10**decimals
     rounded = math.floor(amount * factor) / factor
     return f"{rounded:.{decimals}f}".rstrip("0").rstrip(".")
+
+
+def get_coin_dex(coin: str) -> str:
+    return coin.split(":")[0] if ":" in coin else ""

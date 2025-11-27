@@ -83,10 +83,10 @@ class ExchangeAPI(AsyncAPI):
         vault: str | None = None,
         expires: int | None = None,
     ) -> Any:
-        payloads = {"action": action, "nonce": nonce, "signature": sig}
+        payload = {"action": action, "nonce": nonce, "signature": sig}
         if vault and action["type"] not in ["usdClassTransfer", "sendAsset"]:
-            payloads["vaultAddress"] = vault
+            payload["vaultAddress"] = vault
         if expires:
-            payloads["expiresAfter"] = expires
-        logger.debug(f"Post action payloads: {payloads}")
-        return await self.post(payloads)
+            payload["expiresAfter"] = expires
+        logger.debug(f"Post action payload: {payload}")
+        return await self.post(payload)

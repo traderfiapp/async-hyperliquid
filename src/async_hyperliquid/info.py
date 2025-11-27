@@ -7,7 +7,10 @@ from async_hyperliquid.utils.types import (
     Depth,
     Candles,
     Endpoint,
+    PerpDexs,
+    PerpMeta,
     Referral,
+    SpotMeta,
     UserFees,
     UserRole,
     Portfolio,
@@ -15,6 +18,8 @@ from async_hyperliquid.utils.types import (
     UserFills,
     VaultInfo,
     Delegations,
+    PerpMetaCtx,
+    SpotMetaCtx,
     SubAccounts,
     FundingRates,
     TokenDetails,
@@ -32,11 +37,7 @@ from async_hyperliquid.utils.types import (
     AssetFundingInfo,
     HistoricalOrders,
     PerpDeployStatus,
-    PerpMetaResponse,
-    SpotMetaResponse,
     ClearinghouseState,
-    PerpMetaCtxResponse,
-    SpotMetaCtxResponse,
     SpotClearinghouseState,
 )
 
@@ -45,18 +46,19 @@ class InfoAPI(AsyncAPI):
     def __init__(self, base_url: str, session: ClientSession):
         super().__init__(Endpoint.INFO, base_url, session)
 
-    async def get_all_mids(self) -> dict[str, int]:
-        payloads = {"type": "allMids"}
-        return await self.post(payloads)
+    async def get_all_mids(self, dex: str = "") -> dict[str, int]:
+        payload = {"type": "allMids", "dex": dex}
+        return await self.post(payload)
 
     async def get_user_open_orders(
         self, address: str, is_frontend: bool = False, dex: str = ""
     ) -> UserOpenOrders:
-        payloads = {
+        payload = {
             "type": "frontendOpenOrders" if is_frontend else "openOrders",
             "user": address,
+            "dex": dex,
         }
-        return await self.post(payloads)
+        return await self.post(payload)
 
     async def get_user_fills(
         self,
@@ -66,35 +68,35 @@ class InfoAPI(AsyncAPI):
         start_time: int | None = None,
         end_time: int | None = None,
     ) -> UserFills:
-        payloads = {
+        payload = {
             "type": "userFillsByTime" if start_time else "userFills",
             "user": address,
             "aggregateByTime": aggregated,
         }
         if start_time:
-            payloads["startTime"] = start_time
-            payloads["endTime"] = end_time
-        return await self.post(payloads)
+            payload["startTime"] = start_time
+            payload["endTime"] = end_time
+        return await self.post(payload)
 
     async def get_user_rate_limit(self, address: str) -> RateLimit:
-        payloads = {"type": "userRateLimit", "user": address}
-        return await self.post(payloads)
+        payload = {"type": "userRateLimit", "user": address}
+        return await self.post(payload)
 
     async def get_order_status(
         self, order_id: str | int, address: str
     ) -> OrderWithStatus:
-        payloads = {"type": "orderStatus", "user": address, "oid": order_id}
-        return await self.post(payloads)
+        payload = {"type": "orderStatus", "user": address, "oid": order_id}
+        return await self.post(payload)
 
     async def get_depth(
         self, coin: str, level: int | None = None, mantissa: int | None = None
     ) -> list[Depth]:
-        payloads: dict[str, Any] = {"type": "l2Book", "coin": coin}
+        payload: dict[str, Any] = {"type": "l2Book", "coin": coin}
         if level:
-            payloads["nSigFigs"] = level
+            payload["nSigFigs"] = level
         if level and level == 5 and mantissa:
-            payloads["mantissa"] = mantissa
-        return await self.post(payloads)
+            payload["mantissa"] = mantissa
+        return await self.post(payload)
 
     async def get_candles(
         self, coin: str, interval: CandleInterval, start: int, end: int
@@ -105,87 +107,99 @@ class InfoAPI(AsyncAPI):
             "startTime": start,
             "endTime": end,
         }
-        payloads = {"type": "candleSnapshot", "req": req}
-        return await self.post(payloads)
+        payload = {"type": "candleSnapshot", "req": req}
+        return await self.post(payload)
 
     async def check_user_builder_fee(self, user: str, builder: str) -> int:
-        payloads = {"type": "maxBuilderFee", "user": user, "builder": builder}
-        return await self.post(payloads)
+        payload = {"type": "maxBuilderFee", "user": user, "builder": builder}
+        return await self.post(payload)
 
     async def get_user_order_history(self, address: str) -> HistoricalOrders:
-        payloads = {"type": "historicalOrders", "user": address}
-        return await self.post(payloads)
+        payload = {"type": "historicalOrders", "user": address}
+        return await self.post(payload)
 
     async def get_user_twap_fills(self, address: str) -> TwapSliceFills:
-        payloads = {"type": "userTwapSliceFills", "user": address}
-        return await self.post(payloads)
+        payload = {"type": "userTwapSliceFills", "user": address}
+        return await self.post(payload)
 
     async def get_user_subaccounts(self, address: str) -> SubAccounts:
-        payloads = {"type": "subAccounts", "user": address}
-        return await self.post(payloads)
+        payload = {"type": "subAccounts", "user": address}
+        return await self.post(payload)
 
     async def get_vault_info(
         self, address: str, user: str | None = None
     ) -> VaultInfo:
-        payloads = {"type": "vaultDetails", "vaultAddress": address}
+        payload = {"type": "vaultDetails", "vaultAddress": address}
         if user:
-            payloads["user"] = user
-        return await self.post(payloads)
+            payload["user"] = user
+        return await self.post(payload)
 
     async def get_user_vault_deposits(self, address: str) -> VaultDeposits:
-        payloads = {"type": "userVaultEquities", "user": address}
-        return await self.post(payloads)
+        payload = {"type": "userVaultEquities", "user": address}
+        return await self.post(payload)
 
     async def get_user_role(self, address: str) -> UserRole:
-        payloads = {"type": "userRole", "user": address}
-        return await self.post(payloads)
+        payload = {"type": "userRole", "user": address}
+        return await self.post(payload)
 
     async def get_user_portfolio(self, address: str) -> Portfolio:
-        payloads = {"type": "portfolio", "user": address}
-        return await self.post(payloads)
+        payload = {"type": "portfolio", "user": address}
+        return await self.post(payload)
 
     async def get_user_referral(self, address: str) -> Referral:
-        payloads = {"type": "referral", "user": address}
-        return await self.post(payloads)
+        payload = {"type": "referral", "user": address}
+        return await self.post(payload)
 
     async def get_user_fees(self, address: str) -> UserFees:
-        payloads = {"type": "userFees", "user": address}
-        return await self.post(payloads)
+        payload = {"type": "userFees", "user": address}
+        return await self.post(payload)
 
     async def get_user_delegations(self, address: str) -> Delegations:
-        payloads = {"type": "delegations", "user": address}
-        return await self.post(payloads)
+        payload = {"type": "delegations", "user": address}
+        return await self.post(payload)
 
     async def get_user_staking(self, address: str) -> Delegations:
-        payloads = {"type": "delegations", "user": address}
-        return await self.post(payloads)
+        payload = {"type": "delegations", "user": address}
+        return await self.post(payload)
 
     async def get_user_staking_summary(self, address: str) -> StakingSummary:
-        payloads = {"type": "delegatorSummary", "user": address}
-        return await self.post(payloads)
+        payload = {"type": "delegatorSummary", "user": address}
+        return await self.post(payload)
 
     async def get_user_staking_history(self, address: str) -> StakingHistory:
-        payloads = {"type": "delegatorHistory", "user": address}
-        return await self.post(payloads)
+        payload = {"type": "delegatorHistory", "user": address}
+        return await self.post(payload)
 
     async def get_user_staking_rewards(self, address: str) -> StakingRewards:
-        payloads = {"type": "delegatorRewards", "user": address}
-        return await self.post(payloads)
+        payload = {"type": "delegatorRewards", "user": address}
+        return await self.post(payload)
+
+    async def get_user_dex_abstraction(self, address: str) -> bool:
+        payload = {"type": "userDexAbstraction", "user": address}
+        return await self.post(payload)
+
+    async def get_aligned_quote_token_status(self, token: int):
+        payload = {"type": "alignedQuoteTokenInfo", "token": token}
+        return await self.post(payload)
 
     # Perpetuals
-    async def get_perp_meta(self) -> PerpMetaResponse:
-        payloads = {"type": "meta"}
-        return await self.post(payloads)
+    async def get_perp_meta(self, dex: str = "") -> PerpMeta:
+        payload = {"type": "meta", "dex": dex}
+        return await self.post(payload)
 
-    async def get_perp_meta_ctx(self) -> PerpMetaCtxResponse:
-        payloads = {"type": "metaAndAssetCtxs"}
-        return await self.post(payloads)
+    async def get_perp_meta_ctx(self) -> PerpMetaCtx:
+        payload = {"type": "metaAndAssetCtxs"}
+        return await self.post(payload)
+
+    async def get_perp_dexs(self) -> PerpDexs:
+        payload = {"type": "perpDexs"}
+        return await self.post(payload)
 
     async def get_perp_clearinghouse_state(
-        self, address: str
+        self, address: str, dex: str = ""
     ) -> ClearinghouseState:
-        payloads = {"type": "clearinghouseState", "user": address}
-        return await self.post(payloads)
+        payload = {"type": "clearinghouseState", "user": address, "dex": dex}
+        return await self.post(payload)
 
     async def get_user_funding(
         self,
@@ -194,7 +208,7 @@ class InfoAPI(AsyncAPI):
         end_time: int | None = None,
         is_funding: bool = True,
     ) -> UserFundings:
-        payloads = {
+        payload = {
             "type": "userFunding"
             if is_funding
             else "userNonFundingLedgerUpdates",
@@ -202,62 +216,61 @@ class InfoAPI(AsyncAPI):
             "startTime": start_time,
             "endTime": end_time,
         }
-        return await self.post(payloads)
+        return await self.post(payload)
 
     async def get_funding_rates(
         self, coin: str, start_time: int, end_time: int | None = None
     ) -> FundingRates:
-        payloads = {
+        payload = {
             "type": "fundingHistory",
             "coin": coin,
             "startTime": start_time,
             "endTime": end_time,
         }
-        return await self.post(payloads)
+        return await self.post(payload)
 
     async def get_predicted_funding(self) -> AssetFundingInfo:
-        payloads = {"type": "predictedFundings"}
-        return await self.post(payloads)
+        payload = {"type": "predictedFundings"}
+        return await self.post(payload)
 
     async def get_perps_at_open_interest_cap(self) -> list[str]:
-        payloads = {"type": "perpsAtOpenInterestCap"}
-        return await self.post(payloads)
+        payload = {"type": "perpsAtOpenInterestCap"}
+        return await self.post(payload)
 
     async def get_perp_deploy_status(self) -> PerpDeployStatus:
-        payloads = {"type": "perpDeployAuctionStatus"}
-        return await self.post(payloads)
+        payload = {"type": "perpDeployAuctionStatus"}
+        return await self.post(payload)
 
     async def get_user_active_asset_data(
         self, address: str, coin: str
     ) -> ActiveAssetData:
-        payloads = {"type": "activeAssetData", "user": address, "coin": coin}
-        return await self.post(payloads)
+        payload = {"type": "activeAssetData", "user": address, "coin": coin}
+        return await self.post(payload)
 
     # Spot
-    async def get_spot_meta(self) -> SpotMetaResponse:
-        payloads = {"type": "spotMeta"}
-        return await self.post(payloads)
+    async def get_spot_meta(self) -> SpotMeta:
+        payload = {"type": "spotMeta"}
+        return await self.post(payload)
 
-    async def get_spot_meta_ctx(self) -> SpotMetaCtxResponse:
-        payloads = {"type": "spotMetaAndAssetCtxs"}
-        return await self.post(payloads)
+    async def get_spot_meta_ctx(self) -> SpotMetaCtx:
+        payload = {"type": "spotMetaAndAssetCtxs"}
+        return await self.post(payload)
 
     async def get_user_token_balances(
         self, address: str
     ) -> SpotClearinghouseState:
-        payloads = {"type": "spotClearinghouseState", "user": address}
-        return await self.post(payloads)
+        return await self.get_spot_clearinghouse_state(address)
 
     async def get_spot_clearinghouse_state(
         self, address: str
     ) -> SpotClearinghouseState:
-        payloads = {"type": "spotClearinghouseState", "user": address}
-        return await self.post(payloads)
+        payload = {"type": "spotClearinghouseState", "user": address}
+        return await self.post(payload)
 
     async def get_spot_deploy_state(self, address: str) -> SpotDeployState:
-        payloads = {"type": "spotDeployState", "user": address}
-        return await self.post(payloads)
+        payload = {"type": "spotDeployState", "user": address}
+        return await self.post(payload)
 
     async def get_token_info(self, token_id: str) -> TokenDetails:
-        payloads = {"type": "tokenDetails", "tokenId": token_id}
-        return await self.post(payloads)
+        payload = {"type": "tokenDetails", "tokenId": token_id}
+        return await self.post(payload)

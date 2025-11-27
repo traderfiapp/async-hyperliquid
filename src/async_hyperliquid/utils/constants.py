@@ -6,9 +6,8 @@ HYPE_FACTOR = 10**8  # HYPE decimals is 8
 
 ONE_HOUR_MS = 60 * 60 * 1000
 
-SPOT_ASSET_BASE = 10_000  # SPOT asset id starts from 10_000 in Hyperliquid
-
-SPOT_MARKET_OFFSET = 10_000  # SPOT market id starts from 10_000 in Hyperliquid
+SPOT_OFFSET = 10_000  # SPOT market id starts from 10_000 in Hyperliquid
+PERP_DEX_OFFSET = 110_000  # Builder-deployer perp dexs (HIP-3) start at 110_000
 
 SIGNATURE_CHAIN_ID = "0x66eee"
 

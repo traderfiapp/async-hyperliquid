@@ -19,6 +19,7 @@ from async_hyperliquid.utils.miscs import (
 )
 from async_hyperliquid.utils.types import (
     Cloid,
+    PerpMeta,
     Position,
     SpotMeta,
     OrderType,
@@ -26,6 +27,7 @@ from async_hyperliquid.utils.types import (
     AccountState,
     GroupOptions,
     OrderBuilder,
+    SpotTokenMeta,
     PlaceOrderRequest,
     BatchCancelRequest,
     BatchPlaceOrderRequest,
@@ -49,14 +51,15 @@ from async_hyperliquid.utils.constants import (
     USD_FACTOR,
     HYPE_FACTOR,
     ONE_HOUR_MS,
+    SPOT_OFFSET,
     MAINNET_API_URL,
+    PERP_DEX_OFFSET,
     TESTNET_API_URL,
-    SPOT_MARKET_OFFSET,
 )
 from async_hyperliquid.utils.decorators import private_key_required
 
 
-class AsyncHyper(AsyncAPI):
+class AsyncHyperliquid(AsyncAPI):
     address: str
     is_mainnet: bool
     account: LocalAccount
@@ -67,8 +70,12 @@ class AsyncHyper(AsyncAPI):
 
     coin_assets: dict[str, int]
     coin_names: dict[str, str]
-    spot_tokens: dict[str, SpotMeta]
+    coin_symbols: dict[str, str]
     asset_sz_decimals: dict[int, int]
+    spot_tokens: dict[str, SpotTokenMeta]
+
+    # HIP 3
+    perp_dexs: list[str] | None
 
     enable_evm: bool
     evm_info: EVMInfo
@@ -89,12 +96,21 @@ class AsyncHyper(AsyncAPI):
         self.account = Account.from_key(api_key)
         self.session = ClientSession(timeout=ClientTimeout(connect=3))
         self.base_url = MAINNET_API_URL if is_mainnet else TESTNET_API_URL
-        self._info = InfoAPI(self.base_url, self.session)
-        self._exchange = ExchangeAPI(
+        self.info = InfoAPI(self.base_url, self.session)
+        self.exchange = ExchangeAPI(
             self.account, self.session, self.base_url, address=self.address
         )
+
         self.metas = {}
+
+        self.coin_assets = {}
+        self.coin_names = {}
+        self.coin_symbols = {}
+        self.asset_sz_decimals = {}
+
         self.spot_tokens = {}
+
+        # sub-account or vault address
         self.vault = vault
         # expires will cause actions to be rejected after that timestamp in milliseconds
         self.expires: int | None = None
@@ -123,71 +139,77 @@ class AsyncHyper(AsyncAPI):
 
         self.evm_exchange = EVMExchange(rpc_url, private_key)
 
-    def _init_coin_assets(self):
-        self.coin_assets = {}
-        self.spot_tokens = {}
-
-        for asset, asset_info in enumerate(self.metas["perps"]["universe"]):
-            self.coin_assets[asset_info["name"]] = asset
-
-        for asset_info in self.metas["spots"]["universe"]:
-            asset_name = asset_info["name"]
-            asset = asset_info["index"] + SPOT_MARKET_OFFSET
+    def _init_perp_meta(self, meta: PerpMeta, offset: int) -> None:
+        for asset, info in enumerate(meta["universe"]):
+            asset += offset
+            asset_name = info["name"]
             self.coin_assets[asset_name] = asset
-            token_idx = asset_info["tokens"][0]
-            self.spot_tokens[asset_name] = self.metas["spots"]["tokens"][
-                token_idx
-            ]
+            self.coin_names[asset_name] = asset_name
+            self.asset_sz_decimals[asset] = info["szDecimals"]
 
-    def _init_coin_names(self):
-        self.coin_names = {}
-        for asset_info in self.metas["perps"]["universe"]:
-            self.coin_names[asset_info["name"]] = asset_info["name"]
+    def _init_spot_meta(self, meta: SpotMeta):
+        for info in meta["universe"]:
+            asset = info["index"] + SPOT_OFFSET
+            asset_name = info["name"]
 
-        for asset_info in self.metas["spots"]["universe"]:
-            self.coin_names[asset_info["name"]] = asset_info["name"]
+            self.coin_assets[asset_name] = asset
+
+            self.coin_names[asset_name] = asset_name
             # For token pairs
-            base, quote = asset_info["tokens"]
-            base_info = self.metas["spots"]["tokens"][base]
-            quote_info = self.metas["spots"]["tokens"][quote]
+            base, quote = info["tokens"]
+            base_info = meta["tokens"][base]
             base_name = base_info["name"]
-            quote_name = quote_info["name"]
+            quote_name = meta["tokens"][quote]["name"]
             name = f"{base_name}/{quote_name}"
             if name not in self.coin_names:
-                self.coin_names[name] = asset_info["name"]
+                self.coin_names[name] = asset_name
 
+            self.asset_sz_decimals[asset] = base_info["szDecimals"]
+
+            # For token info
+            self.spot_tokens[asset_name] = meta["tokens"][base]
+
+    def _update_coin_symbols(self):
         self.coin_symbols = {
             v: k for k, v in self.coin_names.items() if not k.startswith("@")
         }
 
-    def _init_asset_sz_decimals(self):
-        self.asset_sz_decimals = {}
-        for asset, asset_info in enumerate(self.metas["perps"]["universe"]):
-            self.asset_sz_decimals[asset] = asset_info["szDecimals"]
-
-        for asset_info in self.metas["spots"]["universe"]:
-            asset = asset_info["index"] + SPOT_MARKET_OFFSET
-            base, _quote = asset_info["tokens"]
-            base_info = self.metas["spots"]["tokens"][base]
-            self.asset_sz_decimals[asset] = base_info["szDecimals"]
-
     async def get_metas(self, perp_only: bool = False):
-        perp_meta = await self._info.get_perp_meta()
+        perp_meta = await self.info.get_perp_meta()
         if perp_only:
             return {"perps": perp_meta, "spots": []}
 
-        spot_meta = await self._info.get_spot_meta()
+        spot_meta = await self.info.get_spot_meta()
 
         return {"perps": perp_meta, "spots": spot_meta}
 
     async def init_metas(self):
-        self.metas = await self.get_metas()
-        # TODO: Support for HIP-3, i.e. different DEX
-        self._init_coin_assets()
-        self._init_coin_names()
-        self._init_asset_sz_decimals()
+        meta = await self.info.get_perp_meta()
+        self._init_perp_meta(meta, 0)
 
-    async def get_coin_name(self, coin: str):
+        spot_meta = await self.info.get_spot_meta()
+        self._init_spot_meta(spot_meta)
+
+        # HIP-3: perp dexs
+        dexs = await self.get_all_dex_name()
+        for i, dex in enumerate(dexs[1:]):
+            dex_meta = await self.info.get_perp_meta(dex)
+            dex_asset_offset = PERP_DEX_OFFSET + i * 10000
+            self._init_perp_meta(dex_meta, dex_asset_offset)
+
+        self._update_coin_symbols()
+
+    async def get_all_dex_name(self) -> list[str]:
+        names = []
+        dexs = await self.info.get_perp_dexs()
+        for dex in dexs:
+            if dex is None:
+                names.append("")  # default for hyperliquid
+            else:
+                names.append(dex["name"])
+        return names
+
+    async def get_coin_name(self, coin: str) -> str:
         if not hasattr(self, "coin_names") or coin not in self.coin_names:
             await self.init_metas()
 
@@ -196,7 +218,7 @@ class AsyncHyper(AsyncAPI):
 
         return self.coin_names[coin]
 
-    async def get_coin_asset(self, coin: str):
+    async def get_coin_asset(self, coin: str) -> int:
         coin_name = await self.get_coin_name(coin)
 
         if coin_name not in self.coin_assets:
@@ -204,7 +226,7 @@ class AsyncHyper(AsyncAPI):
 
         return self.coin_assets[coin_name]
 
-    async def get_coin_symbol(self, coin: str):
+    async def get_coin_symbol(self, coin: str) -> str:
         coin_name = await self.get_coin_name(coin)
         return self.coin_symbols[coin_name]
 
@@ -242,23 +264,20 @@ class AsyncHyper(AsyncAPI):
         spot_data = None
         perp_data = None
         if is_spot or is_all:
-            spot_data = await self._info.get_spot_meta_ctx()
+            spot_data = await self.info.get_spot_meta_ctx()
         if is_perp or is_all:
-            perp_data = await self._info.get_perp_meta_ctx()
+            perp_data = await self.info.get_perp_meta_ctx()
+
+        is_perp = is_perp or is_all  # perp or all
+        is_spot = is_spot or is_all  # spot or all
 
         for coin, asset in self.coin_assets.items():
-            if (
-                asset < 10_000
-                and (is_perp or is_all)
-                and isinstance(perp_data, list)
-            ):  # perp or all
+            is_perp_asset = asset < SPOT_OFFSET
+            is_spot_asset = asset >= SPOT_OFFSET and asset < PERP_DEX_OFFSET
+            if is_perp_asset and is_perp:
                 prices[coin] = float(perp_data[1][asset]["markPx"])  # type: ignore
-            if (
-                asset >= 10_000
-                and (is_spot or is_all)
-                and isinstance(spot_data, list)
-            ):  # spot or all
-                asset -= 10_000
+            if is_spot_asset and is_spot:
+                asset -= SPOT_OFFSET
                 prices[coin] = float(spot_data[1][asset]["markPx"])  # type: ignore
         return prices
 
@@ -266,12 +285,12 @@ class AsyncHyper(AsyncAPI):
         if not address:
             address = self.address
 
-        return await self._info.get_perp_clearinghouse_state(address)
+        return await self.info.get_perp_clearinghouse_state(address)
 
     async def get_spot_account_state(self, address: str | None = None):
         if not address:
             address = self.address
-        return await self._info.get_spot_clearinghouse_state(address)
+        return await self.info.get_spot_clearinghouse_state(address)
 
     async def get_account_state(self, address: str | None = None):
         account_state: AccountState = {"perp": {}, "spot": {}}  # type: ignore
@@ -287,7 +306,7 @@ class AsyncHyper(AsyncAPI):
         if not address:
             address = self.address
 
-        return await self._info.get_user_portfolio(address)
+        return await self.info.get_user_portfolio(address)
 
     async def get_latest_ledgers(
         self,
@@ -302,7 +321,7 @@ class AsyncHyper(AsyncAPI):
             start_time = now - one_hour
         if not address:
             address = self.address
-        data = await self._info.get_user_funding(
+        data = await self.info.get_user_funding(
             address, start_time, end_time=end_time, is_funding=False
         )
         return [d for d in data if d["delta"]["type"] == ledger_type]  # type: ignore
@@ -342,12 +361,12 @@ class AsyncHyper(AsyncAPI):
     ):
         if not address:
             address = self.address
-        return await self._info.get_user_open_orders(address, is_frontend)
+        return await self.info.get_user_open_orders(address, is_frontend)
 
     async def get_order_status(self, order_id: int, address: str | None = None):
         if not address:
             address = self.address
-        return await self._info.get_order_status(order_id, address)
+        return await self.info.get_order_status(order_id, address)
 
     # Exchange API
     async def _slippage_price(
@@ -355,11 +374,11 @@ class AsyncHyper(AsyncAPI):
     ):
         coin_name = await self.get_coin_name(coin)
         if not px:
-            all_mids = await self._info.get_all_mids()
+            all_mids = await self.info.get_all_mids()
             px = float(all_mids[coin_name])
 
         asset = await self.get_coin_asset(coin)
-        is_spot = asset >= SPOT_MARKET_OFFSET
+        is_spot = asset >= SPOT_OFFSET
         sz_decimals = await self.get_coin_sz_decimals(coin)
         px *= (1 + slippage) if is_buy else (1 - slippage)
         px_decimals = (6 if not is_spot else 8) - sz_decimals
@@ -367,7 +386,7 @@ class AsyncHyper(AsyncAPI):
 
     async def _round_sz_px(self, coin: str, sz: float, px: float):
         asset = await self.get_coin_asset(coin)
-        is_spot = asset >= SPOT_MARKET_OFFSET
+        is_spot = asset >= SPOT_OFFSET and asset < PERP_DEX_OFFSET
         sz_decimals = await self.get_coin_sz_decimals(coin)
         px_decimals = (6 if not is_spot else 8) - sz_decimals
         return asset, round_float(sz, sz_decimals), round_px(px, px_decimals)
@@ -420,7 +439,7 @@ class AsyncHyper(AsyncAPI):
 
         action = orders_to_action(encoded_orders, grouping, builder)
 
-        return await self._exchange.post_action(
+        return await self.exchange.post_action(
             action, vault=self.vault, expires=self.expires
         )
 
@@ -485,7 +504,7 @@ class AsyncHyper(AsyncAPI):
             ],
         }
 
-        return await self._exchange.post_action(
+        return await self.exchange.post_action(
             action, vault=self.vault, expires=self.expires
         )
 
@@ -504,13 +523,13 @@ class AsyncHyper(AsyncAPI):
             ],
         }
 
-        return await self._exchange.post_action(
+        return await self.exchange.post_action(
             action, vault=self.vault, expires=self.expires
         )
 
     async def schedule_cancel(self, time: int | None = None):
         action = {"type": "scheduleCancel", "time": time}
-        return await self._exchange.post_action(
+        return await self.exchange.post_action(
             action, vault=self.vault, expires=self.expires
         )
 
@@ -551,7 +570,7 @@ class AsyncHyper(AsyncAPI):
             for m in modify_req
         ]
         action = {"type": "batchModify", "modifies": modifies}
-        return await self._exchange.post_action(
+        return await self.exchange.post_action(
             action, vault=self.vault, expires=self.expires
         )
 
@@ -565,7 +584,7 @@ class AsyncHyper(AsyncAPI):
             "leverage": leverage,
         }
 
-        return await self._exchange.post_action(
+        return await self.exchange.post_action(
             action, vault=self.vault, expires=self.expires
         )
 
@@ -583,18 +602,18 @@ class AsyncHyper(AsyncAPI):
             "ntli": amount,
         }
 
-        return await self._exchange.post_action(
+        return await self.exchange.post_action(
             action, vault=self.vault, expires=self.expires
         )
 
     async def set_referrer_code(self, code: str):
         action = {"type": "setReferrer", "code": code}
-        return await self._exchange.post_action(action)
+        return await self.exchange.post_action(action)
 
     @private_key_required
     async def create_sub_account(self, name: str):
         action = {"type": "createSubAccount", "name": name}
-        return await self._exchange.post_action(action)
+        return await self.exchange.post_action(action)
 
     @private_key_required
     async def usd_transfer(self, amount: float, dest: str):
@@ -607,7 +626,7 @@ class AsyncHyper(AsyncAPI):
         }
         is_mainnet = self.base_url == MAINNET_API_URL
         sig = sign_usd_transfer_action(self.account, action, is_mainnet)
-        return await self._exchange.post_action_with_sig(action, sig, nonce)
+        return await self.exchange.post_action_with_sig(action, sig, nonce)
 
     @private_key_required
     async def spot_transfer(self, coin: str, amount: float, dest: str):
@@ -625,7 +644,7 @@ class AsyncHyper(AsyncAPI):
             "time": nonce,
         }
         sig = sign_spot_transfer_action(self.account, action, self.is_mainnet)
-        return await self._exchange.post_action_with_sig(action, sig, nonce)
+        return await self.exchange.post_action_with_sig(action, sig, nonce)
 
     @private_key_required
     async def initiate_withdrawal(self, amount: float):
@@ -637,7 +656,7 @@ class AsyncHyper(AsyncAPI):
             "destination": self.address,
         }
         sig = sign_withdraw_action(self.account, action, self.is_mainnet)
-        return await self._exchange.post_action_with_sig(action, sig, nonce)
+        return await self.exchange.post_action_with_sig(action, sig, nonce)
 
     @private_key_required
     async def usd_class_transfer(self, amount: float, to_perp: bool = False):
@@ -651,7 +670,7 @@ class AsyncHyper(AsyncAPI):
         sig = sign_usd_class_transfer_action(
             self.account, action, self.base_url == MAINNET_API_URL
         )
-        return await self._exchange.post_action_with_sig(action, sig, nonce)
+        return await self.exchange.post_action_with_sig(action, sig, nonce)
 
     @private_key_required
     async def send_asset(
@@ -680,7 +699,7 @@ class AsyncHyper(AsyncAPI):
             "nonce": nonce,
         }
         sig = sign_send_asset_action(self.account, action, self.is_mainnet)
-        return await self._exchange.post_action_with_sig(action, sig, nonce)
+        return await self.exchange.post_action_with_sig(action, sig, nonce)
 
     @private_key_required
     async def staking_deposit(self, amount: float):
@@ -688,7 +707,7 @@ class AsyncHyper(AsyncAPI):
         nonce = get_timestamp_ms()
         action = {"type": "cDeposit", "wei": amount_in_wei, "nonce": nonce}
         sig = sign_staking_deposit_action(self.account, action, self.is_mainnet)
-        return await self._exchange.post_action_with_sig(action, sig, nonce)
+        return await self.exchange.post_action_with_sig(action, sig, nonce)
 
     @private_key_required
     async def staking_withdraw(self, amount: float):
@@ -698,7 +717,7 @@ class AsyncHyper(AsyncAPI):
         sig = sign_staking_withdraw_action(
             self.account, action, self.is_mainnet
         )
-        return await self._exchange.post_action_with_sig(action, sig, nonce)
+        return await self.exchange.post_action_with_sig(action, sig, nonce)
 
     @private_key_required
     async def token_delegate(
@@ -715,7 +734,7 @@ class AsyncHyper(AsyncAPI):
             "nonce": nonce,
         }
         sig = sign_token_delegate_action(self.account, action, self.is_mainnet)
-        return await self._exchange.post_action_with_sig(action, sig, nonce)
+        return await self.exchange.post_action_with_sig(action, sig, nonce)
 
     @private_key_required
     async def vault_transfer(
@@ -728,7 +747,7 @@ class AsyncHyper(AsyncAPI):
             "isDeposit": is_deposit,
             "usd": usd_amount,
         }
-        return await self._exchange.post_action(action)
+        return await self.exchange.post_action(action)
 
     async def approve_agent(self, agent: str, name: str | None = None):
         nonce = get_timestamp_ms()
@@ -742,7 +761,7 @@ class AsyncHyper(AsyncAPI):
         if name is None:
             del action["agentName"]
 
-        return await self._exchange.post_action_with_sig(action, sig, nonce)
+        return await self.exchange.post_action_with_sig(action, sig, nonce)
 
     async def approve_builder_fee(self, max_fee_rate: float, builder: str):
         nonce = get_timestamp_ms()
@@ -755,7 +774,7 @@ class AsyncHyper(AsyncAPI):
         sig = sign_approve_builder_fee_action(
             self.account, action, self.is_mainnet
         )
-        return await self._exchange.post_action_with_sig(action, sig, nonce)
+        return await self.exchange.post_action_with_sig(action, sig, nonce)
 
     async def place_twap(
         self,
@@ -779,7 +798,7 @@ class AsyncHyper(AsyncAPI):
                 "t": randomize,
             },
         }
-        return await self._exchange.post_action(
+        return await self.exchange.post_action(
             action, vault=self.vault, expires=self.expires
         )
 
@@ -789,7 +808,7 @@ class AsyncHyper(AsyncAPI):
             "a": await self.get_coin_asset(coin),
             "t": twap_id,
         }
-        return await self._exchange.post_action(action)
+        return await self.exchange.post_action(action)
 
     async def convert_to_multi_sig_user(self, users: list[str], threshold: int):
         nonce = get_timestamp_ms()
@@ -802,21 +821,21 @@ class AsyncHyper(AsyncAPI):
         sig = sign_convert_to_multi_sig_user_action(
             self.account, action, self.is_mainnet
         )
-        return await self._exchange.post_action_with_sig(action, sig, nonce)
+        return await self.exchange.post_action_with_sig(action, sig, nonce)
 
     async def reserve_request_weight(self, weight: int):
         action = {"type": "reserveRequestWeight", "weight": weight}
-        return await self._exchange.post_action(action, expires=self.expires)
+        return await self.exchange.post_action(action, expires=self.expires)
 
     async def use_big_block(self, enable: bool):
         action = {"type": "evmUserModify", "usingBigBlocks": enable}
-        return await self._exchange.post_action(action)
+        return await self.exchange.post_action(action)
 
     async def get_all_positions(self, address: str | None = None):
         if not address:
             address = self.address
 
-        resp = await self._info.get_perp_clearinghouse_state(address)
+        resp = await self.info.get_perp_clearinghouse_state(address)
         positions = [p["position"] for p in resp["assetPositions"]]
         return positions
 
@@ -875,3 +894,6 @@ class AsyncHyper(AsyncAPI):
             leverages[coin] = leverage
 
         return leverages
+
+
+AsyncHyper = AsyncHyperliquid

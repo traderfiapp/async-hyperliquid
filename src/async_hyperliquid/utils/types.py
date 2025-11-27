@@ -499,7 +499,7 @@ class StakingReward(TypedDict):
 StakingRewards = list[StakingReward]
 
 
-class PerpMeta(TypedDict):
+class PerpMetaItem(TypedDict):
     name: str
     szDecimals: int
     maxLeverage: int
@@ -507,11 +507,11 @@ class PerpMeta(TypedDict):
     isDelisted: bool | None
 
 
-class PerpMetaResponse(TypedDict):
-    universe: list[PerpMeta]
+class PerpMeta(TypedDict):
+    universe: list[PerpMetaItem]
 
 
-class PerpMetaCtx(TypedDict):
+class PerpMetaCtxItem(TypedDict):
     dayNtlVlm: str
     funding: str
     impactPxs: list[str]
@@ -523,7 +523,40 @@ class PerpMetaCtx(TypedDict):
     prevDayPx: str
 
 
-PerpMetaCtxResponse = list[PerpMetaResponse | list[PerpMetaCtx]]
+PerpMetaCtx = list[PerpMeta | list[PerpMetaCtxItem]]
+
+
+DexAssetOICap = tuple[str, str]
+
+DexSubDeployerAction = Literal[
+    "registerAsset",
+    "setOracle",
+    "insertMarginTable",
+    "setFeeRecipient",
+    "haltTrading",
+    "setMarginTableIds",
+    "setOpenInterestCaps",
+    "setFundingMultipliers",
+    "setMarginModes",
+    "setFeeScale",
+    "setGrowthModes",
+]
+
+DexSubDeployer = tuple[DexSubDeployerAction, list[str]]
+
+
+class PerpDex(TypedDict):
+    name: str
+    fullName: str
+    deployer: str
+    oracleUpdater: str | None
+    feeRecipient: str
+    assetToStreamingOiCap: list[DexAssetOICap]
+    subDeployers: list[DexSubDeployer]
+    lastDeployerFeeScaleChangeTime: str
+
+
+PerpDexs = list[PerpDex | None]
 
 
 class AssetFunding(TypedDict):
@@ -688,7 +721,7 @@ class TokenPairs(Token):
     tokens: tuple[int, int]
 
 
-class SpotMeta(Token):
+class SpotTokenMeta(Token):
     szDecimals: int
     weiDecimals: int
     tokenId: str
@@ -696,19 +729,19 @@ class SpotMeta(Token):
     fullName: str | None
 
 
-class SpotMetaResponse(TypedDict):
-    tokens: list[SpotMeta]
+class SpotMeta(TypedDict):
+    tokens: list[SpotTokenMeta]
     universe: list[TokenPairs]
 
 
-class SpotMetaCtx(TypedDict):
+class SpotMetaCtxItem(TypedDict):
     dayNtlVlm: str
     markPx: str
     midPx: str
     prevDayPx: str
 
 
-SpotMetaCtxResponse = list[SpotMetaResponse | list[SpotMetaCtx]]
+SpotMetaCtx = list[SpotMeta | list[SpotMetaCtxItem]]
 
 
 class TokenBalance(TypedDict):
