@@ -458,21 +458,6 @@ class AsyncHyperliquid(AsyncAPI):
         return positions
 
     # Exchange API
-    async def _slippage_price(
-        self, coin: str, is_buy: bool, slippage: float, px: float
-    ):
-        coin_name = await self.get_coin_name(coin)
-        if not px:
-            all_mids = await self.info.get_all_mids()
-            px = float(all_mids[coin_name])
-
-        asset = await self.get_coin_asset(coin)
-        is_spot = asset >= SPOT_OFFSET
-        sz_decimals = await self.get_coin_sz_decimals(coin)
-        px *= (1 + slippage) if is_buy else (1 - slippage)
-        px_decimals = (6 if not is_spot else 8) - sz_decimals
-        return round_float(px, px_decimals)
-
     async def _round_sz_px(self, coin: str, sz: float, px: float):
         asset = await self.get_coin_asset(coin)
         is_spot = asset >= SPOT_OFFSET and asset < PERP_DEX_OFFSET
@@ -495,9 +480,9 @@ class AsyncHyperliquid(AsyncAPI):
         builder: OrderBuilder | None = None,
     ):
         if is_market:
-            market_price = await self.get_market_price(coin)
+            mid_px = await self.get_mid_price(coin)
             slippage_factor = (1 + slippage) if is_buy else (1 - slippage)
-            px = market_price * slippage_factor
+            px = mid_px * slippage_factor
             # Market order is an aggressive Limit Order IoC
             order_type = LimitOrder.IOC.value  # type: ignore
 
@@ -560,11 +545,11 @@ class AsyncHyperliquid(AsyncAPI):
         slippage: float = 0.05,  # Default slippage is 5%
     ):
         reqs = []
-        market_prices = await self.get_all_market_prices()
+        all_mids = await self.get_all_mids()
         order_type = LimitOrder.IOC.value
         for o in orders:
             coin = o["coin"]
-            market_price = market_prices[coin]
+            market_price = all_mids[coin]
             slippage_factor = (1 + slippage) if o["is_buy"] else (1 - slippage)
             px = market_price * slippage_factor
             asset, sz, px = await self._round_sz_px(coin, o["sz"], px)
@@ -952,7 +937,7 @@ class AsyncHyperliquid(AsyncAPI):
             )
 
         size = float(target["szi"])
-        price = await self.get_market_price(coin)
+        price = await self.get_mid_price(coin)
         if not price:
             raise ValueError(f"Failed to retrieve market price for {coin}")
 

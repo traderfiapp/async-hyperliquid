@@ -2,12 +2,12 @@ import asyncio
 
 import pytest
 
-from async_hyperliquid.async_hyperliquid import AsyncHyper
+from async_hyperliquid import AsyncHyperliquid
 from async_hyperliquid.utils.types import Cloid, LimitOrder
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_update_leverage(hl: AsyncHyper):
+async def test_update_leverage(hl: AsyncHyperliquid):
     leverage = 10
     coin = "BTC"
     resp = await hl.update_leverage(leverage, coin)
@@ -16,7 +16,7 @@ async def test_update_leverage(hl: AsyncHyper):
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_spot_order(hl: AsyncHyper):
+async def test_spot_order(hl: AsyncHyperliquid):
     # coin = "BTC/USDC"
     coin = "@142"  # @142 is the coin name for symbol BTC/USDC
     buy_value = 10 + 0.3
@@ -45,7 +45,7 @@ async def test_spot_order(hl: AsyncHyper):
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_perp_order(hl: AsyncHyper):
+async def test_perp_order(hl: AsyncHyperliquid):
     coin = "BTC"
     px = 105_001.0
     sz = 0.0001
@@ -72,7 +72,24 @@ async def test_perp_order(hl: AsyncHyper):
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_update_isolated_margin(hl: AsyncHyper):
+async def test_perp_dex_order(hl: AsyncHyperliquid):
+    coin = "xyz:XYZ100"
+
+    payload = {
+        "coin": coin,
+        "is_buy": True,
+        "sz": 0.1,
+        "px": 100,
+        "is_market": True,
+    }
+    resp = await hl.place_order(**payload)
+
+    assert resp["status"] == "ok"
+    assert isinstance(resp["response"], dict)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_update_isolated_margin(hl: AsyncHyperliquid):
     res = await hl.update_leverage(2, "ETH", is_cross=False)
     print("Isolated leverage updated resp:", res)
 
@@ -92,7 +109,7 @@ async def test_update_isolated_margin(hl: AsyncHyper):
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_batch_place_orders(hl: AsyncHyper):
+async def test_batch_place_orders(hl: AsyncHyperliquid):
     coin = "BTC"
     is_buy = True
     sz = 0.001
@@ -161,7 +178,7 @@ async def test_batch_place_orders(hl: AsyncHyper):
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_modify_order(hl: AsyncHyper):
+async def test_modify_order(hl: AsyncHyperliquid):
     cloid = Cloid.from_str("0x00000000000000000000000000000001")
     coin = "BTC"
     px = 120_000
@@ -208,7 +225,7 @@ async def test_modify_order(hl: AsyncHyper):
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_twap_order(hl: AsyncHyper):
+async def test_twap_order(hl: AsyncHyperliquid):
     coin = "kBONK"
     is_buy = True
     sz = 32451
@@ -241,13 +258,13 @@ async def test_twap_order(hl: AsyncHyper):
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_use_big_block(hl: AsyncHyper):
+async def test_use_big_block(hl: AsyncHyperliquid):
     resp = await hl.use_big_block(True)
     print(resp, end=" ")
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_usd_transfer(hl: AsyncHyper):
+async def test_usd_transfer(hl: AsyncHyperliquid):
     # This action requires account private key
     amount = 1.126
     dest = ""  # Setup another account on testnet
@@ -257,7 +274,7 @@ async def test_usd_transfer(hl: AsyncHyper):
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_spot_transfer(hl: AsyncHyper):
+async def test_spot_transfer(hl: AsyncHyperliquid):
     # This action requires account private key
     coin = "HYPE/USDC"
     amount = 0.000000016
@@ -268,7 +285,7 @@ async def test_spot_transfer(hl: AsyncHyper):
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_withdraw(hl: AsyncHyper):
+async def test_withdraw(hl: AsyncHyperliquid):
     # This action requires account private key
     amount = 12.126
     resp = await hl.initiate_withdrawal(amount)
@@ -277,7 +294,7 @@ async def test_withdraw(hl: AsyncHyper):
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_usd_class_transfer(hl: AsyncHyper):
+async def test_usd_class_transfer(hl: AsyncHyperliquid):
     # This action requires account private key
     amount = 10.356
     to_perp = True
@@ -293,7 +310,7 @@ async def test_usd_class_transfer(hl: AsyncHyper):
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_vault_transfer(hl: AsyncHyper):
+async def test_vault_transfer(hl: AsyncHyperliquid):
     hlp = "0xa15099a30bbf2e68942d6f4c43d70d04faeab0a0"
     amount = 10.123
     is_deposit = True
@@ -303,7 +320,7 @@ async def test_vault_transfer(hl: AsyncHyper):
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_staking_deposit(hl: AsyncHyper):
+async def test_staking_deposit(hl: AsyncHyperliquid):
     amount = 0.01
     resp = await hl.staking_deposit(amount)
     print(resp)
@@ -311,7 +328,7 @@ async def test_staking_deposit(hl: AsyncHyper):
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_staking_withdraw(hl: AsyncHyper):
+async def test_staking_withdraw(hl: AsyncHyperliquid):
     amount = 0.01
     resp = await hl.staking_withdraw(amount)
     print(resp)
@@ -319,7 +336,7 @@ async def test_staking_withdraw(hl: AsyncHyper):
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_token_delegate(hl: AsyncHyper):
+async def test_token_delegate(hl: AsyncHyperliquid):
     # This action requires account private key
     validator = "0x4dbf394da4b348b88e8090d22051af83e4cbaef4"  # Hypurr3
     amount = 0.01

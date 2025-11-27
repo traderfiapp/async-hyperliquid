@@ -4,14 +4,14 @@ from typing import AsyncGenerator
 import pytest_asyncio
 
 from async_hyperliquid import AsyncHyperliquid
+from dotenv import load_dotenv
+from pathlib import Path
+
+env_file = Path(".env.local")
+load_dotenv(env_file)
 
 
 def get_is_mainnet() -> bool:
-    from dotenv import load_dotenv
-    from pathlib import Path
-
-    env_file = Path(".env.local")
-    load_dotenv(env_file)
     return os.getenv("IS_MAINNET", "true").lower() == "true"
 
 
