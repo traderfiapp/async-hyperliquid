@@ -83,9 +83,14 @@ class InfoAPI(AsyncAPI):
         return await self.post(payload)
 
     async def get_order_status(
-        self, order_id: str | int, address: str
+        self, order_id: str | int, address: str, dex: str = ""
     ) -> OrderWithStatus:
-        payload = {"type": "orderStatus", "user": address, "oid": order_id}
+        payload = {
+            "type": "orderStatus",
+            "user": address,
+            "oid": order_id,
+            "dex": dex,
+        }
         return await self.post(payload)
 
     async def get_depth(

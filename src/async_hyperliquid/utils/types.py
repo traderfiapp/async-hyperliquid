@@ -757,8 +757,9 @@ class SpotClearinghouseState(TypedDict):
 
 
 class AccountState(TypedDict):
-    perp: ClearinghouseState
-    spot: SpotClearinghouseState
+    perp: ClearinghouseState | dict
+    spot: SpotClearinghouseState | dict
+    dexs: dict[str, ClearinghouseState | dict]
 
 
 class GasAuction(TypedDict):
@@ -825,6 +826,12 @@ class SubAccount(TypedDict):
 
 
 SubAccounts = list[SubAccount]
+
+
+class Metas(TypedDict):
+    perp: PerpMeta | dict
+    spot: SpotMeta | list
+    dexs: dict[str, PerpMeta]
 
 
 class SignType(str, Enum):

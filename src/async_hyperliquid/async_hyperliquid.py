@@ -1,5 +1,5 @@
 import math
-from typing import Any, Literal
+from typing import Literal
 
 from aiohttp import ClientSession, ClientTimeout
 from eth_account import Account
@@ -18,9 +18,13 @@ from async_hyperliquid.utils.miscs import (
     round_token_amount,
 )
 from async_hyperliquid.utils.types import (
+    ClearinghouseState,
     Cloid,
+    OrderWithStatus,
     PerpMeta,
+    Portfolio,
     Position,
+    SpotClearinghouseState,
     SpotMeta,
     OrderType,
     LimitOrder,
@@ -31,6 +35,12 @@ from async_hyperliquid.utils.types import (
     PlaceOrderRequest,
     BatchCancelRequest,
     BatchPlaceOrderRequest,
+    Metas,
+    UserDeposit,
+    UserNonFundingDelta,
+    UserOpenOrders,
+    UserTransfer,
+    UserWithdraw,
 )
 from async_hyperliquid.utils.signing import (
     encode_order,
@@ -65,7 +75,6 @@ class AsyncHyperliquid(AsyncAPI):
     account: LocalAccount
     session: ClientSession
     base_url: str
-    metas: dict[str, Any]
     vault: str | None
 
     coin_assets: dict[str, int]
@@ -101,8 +110,6 @@ class AsyncHyperliquid(AsyncAPI):
             self.account, self.session, self.base_url, address=self.address
         )
 
-        self.metas = {}
-
         self.coin_assets = {}
         self.coin_names = {}
         self.coin_symbols = {}
@@ -123,7 +130,7 @@ class AsyncHyperliquid(AsyncAPI):
 
     def _init_evm_client(
         self, private_key: str | None, rpc_url: str | None = None
-    ):
+    ) -> None:
         if rpc_url is None:
             rpc_url = HL_RPC_URL if self.is_mainnet else HL_TESTNET_RPC_URL
 
@@ -147,7 +154,7 @@ class AsyncHyperliquid(AsyncAPI):
             self.coin_names[asset_name] = asset_name
             self.asset_sz_decimals[asset] = info["szDecimals"]
 
-    def _init_spot_meta(self, meta: SpotMeta):
+    def _init_spot_meta(self, meta: SpotMeta) -> None:
         for info in meta["universe"]:
             asset = info["index"] + SPOT_OFFSET
             asset_name = info["name"]
@@ -169,21 +176,12 @@ class AsyncHyperliquid(AsyncAPI):
             # For token info
             self.spot_tokens[asset_name] = meta["tokens"][base]
 
-    def _update_coin_symbols(self):
+    def _update_coin_symbols(self) -> None:
         self.coin_symbols = {
             v: k for k, v in self.coin_names.items() if not k.startswith("@")
         }
 
-    async def get_metas(self, perp_only: bool = False):
-        perp_meta = await self.info.get_perp_meta()
-        if perp_only:
-            return {"perps": perp_meta, "spots": []}
-
-        spot_meta = await self.info.get_spot_meta()
-
-        return {"perps": perp_meta, "spots": spot_meta}
-
-    async def init_metas(self):
+    async def init_metas(self) -> None:
         meta = await self.info.get_perp_meta()
         self._init_perp_meta(meta, 0)
 
@@ -198,6 +196,28 @@ class AsyncHyperliquid(AsyncAPI):
             self._init_perp_meta(dex_meta, dex_asset_offset)
 
         self._update_coin_symbols()
+
+    async def get_metas(self, perp_only: bool = False) -> Metas:
+        metas: Metas = {"perp": {}, "spot": [], "dexs": {}}
+        perp_meta = await self.info.get_perp_meta()
+        if perp_only:
+            metas["perp"] = perp_meta
+            return metas
+
+        metas["spot"] = await self.info.get_spot_meta()
+        return metas
+
+    async def get_all_metas(self) -> Metas:
+        dexs = await self.get_all_dex_name()
+        dex_metas = {}
+
+        for dex in dexs[1:]:
+            meta = await self.info.get_perp_meta(dex)
+            dex_metas[dex] = meta
+
+        spot_meta = await self.info.get_spot_meta()
+        perp_meta = await self.info.get_perp_meta()
+        return {"perp": perp_meta, "spot": spot_meta, "dexs": dex_metas}
 
     async def get_all_dex_name(self) -> list[str]:
         names = []
@@ -230,30 +250,42 @@ class AsyncHyperliquid(AsyncAPI):
         coin_name = await self.get_coin_name(coin)
         return self.coin_symbols[coin_name]
 
-    async def get_coin_sz_decimals(self, coin: str):
+    async def get_coin_sz_decimals(self, coin: str) -> int:
         coin_name = await self.get_coin_name(coin)
         asset = await self.get_coin_asset(coin_name)
         return self.asset_sz_decimals[asset]
 
-    async def get_token_info(self, coin: str):
+    async def get_token_info(self, coin: str) -> SpotTokenMeta:
         coin_name = await self.get_coin_name(coin)
         return self.spot_tokens[coin_name]
 
-    async def get_token_id(self, coin: str):
+    async def get_token_id(self, coin: str) -> str:
         token_info = await self.get_token_info(coin)
         if not token_info:
             raise ValueError(f"Token {coin} not found")
 
         return token_info["tokenId"]
 
-    async def get_market_price(self, coin: str):
+    async def get_market_price(self, coin: str) -> float:
+        import warnings
+
+        warnings.warn(
+            "get_market_price is deprecated and will remove in the future, use get_mid_price instead"
+        )
+        # Only works for hyperliquid core perp and spot market
         coin_name = await self.get_coin_name(coin)
         market_prices = await self.get_all_market_prices()
         return market_prices[coin_name]
 
     async def get_all_market_prices(
         self, market: Literal["spot", "perp", "all"] = "all"
-    ):
+    ) -> dict[str, float]:
+        import warnings
+
+        warnings.warn(
+            "get_all_market_prices is deprecated and will remove in the future, use get_all_mids instead"
+        )
+        # Only works for hyperliquid core perp and spot market
         is_spot = market == "spot"
         is_perp = market == "perp"
         is_all = market == "all"
@@ -281,28 +313,59 @@ class AsyncHyperliquid(AsyncAPI):
                 prices[coin] = float(spot_data[1][asset]["markPx"])  # type: ignore
         return prices
 
-    async def get_perp_account_state(self, address: str | None = None):
+    async def get_mid_price(self, coin: str) -> float:
+        coin_name = await self.get_coin_name(coin)
+        all_mids = await self.get_all_mids()
+        return all_mids[coin_name]
+
+    async def get_all_mids(self) -> dict[str, float]:
+        all_mids = {}
+        dexs = await self.get_all_dex_name()
+        for dex in dexs:
+            mids = await self.info.get_all_mids(dex)
+            all_mids.update(mids)
+
+        for k, v in all_mids.items():
+            all_mids[k] = float(v)
+
+        return all_mids
+
+    async def get_perp_account_state(
+        self, address: str | None = None, dex: str = ""
+    ) -> ClearinghouseState:
         if not address:
             address = self.address
 
         return await self.info.get_perp_clearinghouse_state(address)
 
-    async def get_spot_account_state(self, address: str | None = None):
+    async def get_spot_account_state(
+        self, address: str | None = None
+    ) -> SpotClearinghouseState:
         if not address:
             address = self.address
         return await self.info.get_spot_clearinghouse_state(address)
 
-    async def get_account_state(self, address: str | None = None):
-        account_state: AccountState = {"perp": {}, "spot": {}}  # type: ignore
+    async def get_account_state(
+        self, address: str | None = None
+    ) -> AccountState:
+        account_state: AccountState = {"perp": {}, "spot": {}, "dexs": {}}
         if not address:
             address = self.address
 
         account_state["perp"] = await self.get_perp_account_state(address)
         account_state["spot"] = await self.get_spot_account_state(address)
 
+        dexs = await self.get_all_dex_name()
+        for dex in dexs[1:]:
+            account_state["dexs"][dex] = await self.get_perp_account_state(
+                address, dex
+            )
+
         return account_state
 
-    async def get_account_portfolio(self, address: str | None = None):
+    async def get_account_portfolio(
+        self, address: str | None = None
+    ) -> Portfolio:
         if not address:
             address = self.address
 
@@ -314,7 +377,7 @@ class AsyncHyperliquid(AsyncAPI):
         address: str | None = None,
         start_time: int | None = None,
         end_time: int | None = None,
-    ):
+    ) -> list[UserNonFundingDelta]:
         if not start_time:
             now = get_timestamp_ms()
             one_hour = ONE_HOUR_MS
@@ -331,42 +394,68 @@ class AsyncHyperliquid(AsyncAPI):
         address: str | None = None,
         start_time: int | None = None,
         end_time: int | None = None,
-    ):
+    ) -> list[UserDeposit]:
         return await self.get_latest_ledgers(
             "deposit", address, start_time, end_time
-        )
+        )  # type: ignore
 
     async def get_latest_withdraws(
         self,
         address: str | None = None,
         start_time: int | None = None,
         end_time: int | None = None,
-    ):
+    ) -> list[UserWithdraw]:
         return await self.get_latest_ledgers(
             "withdraw", address, start_time, end_time
-        )
+        )  # type: ignore
 
     async def get_latest_transfers(
         self,
         address: str | None = None,
         start_time: int | None = None,
         end_time: int | None = None,
-    ):
+    ) -> list[UserTransfer]:
         return await self.get_latest_ledgers(
             "accountClassTransfer", address, start_time, end_time
-        )
+        )  # type: ignore
 
     async def get_user_open_orders(
-        self, address: str | None = None, is_frontend: bool = False
-    ):
+        self,
+        address: str | None = None,
+        is_frontend: bool = False,
+        dex: str = "",
+    ) -> UserOpenOrders:
         if not address:
             address = self.address
-        return await self.info.get_user_open_orders(address, is_frontend)
+        return await self.info.get_user_open_orders(address, is_frontend, dex)
 
-    async def get_order_status(self, order_id: int, address: str | None = None):
+    async def get_order_status(
+        self, order_id: int, address: str | None = None, dex: str = ""
+    ) -> OrderWithStatus:
         if not address:
             address = self.address
-        return await self.info.get_order_status(order_id, address)
+        return await self.info.get_order_status(order_id, address, dex)
+
+    async def get_dex_positions(
+        self, address: str | None = None, dex: str = ""
+    ) -> list[Position]:
+        if not address:
+            address = self.address
+
+        resp = await self.info.get_perp_clearinghouse_state(address, dex)
+        positions = [p["position"] for p in resp["assetPositions"]]
+        return positions
+
+    async def get_all_positions(
+        self, address: str | None = None
+    ) -> list[Position]:
+        if not address:
+            address = self.address
+        dexs = await self.get_all_dex_name()
+        positions = []
+        for dex in dexs:
+            positions.extend(await self.get_dex_positions(address, dex))
+        return positions
 
     # Exchange API
     async def _slippage_price(
@@ -831,14 +920,6 @@ class AsyncHyperliquid(AsyncAPI):
         action = {"type": "evmUserModify", "usingBigBlocks": enable}
         return await self.exchange.post_action(action)
 
-    async def get_all_positions(self, address: str | None = None):
-        if not address:
-            address = self.address
-
-        resp = await self.info.get_perp_clearinghouse_state(address)
-        positions = [p["position"] for p in resp["assetPositions"]]
-        return positions
-
     async def close_all_positions(self):
         positions = await self.get_all_positions()
         if not positions:
@@ -858,7 +939,7 @@ class AsyncHyperliquid(AsyncAPI):
 
         return await self.batch_place_orders(orders, is_market=True)
 
-    async def close_position(self, coin: str):
+    async def close_position(self, coin: str, dex: str = ""):
         positions = await self.get_all_positions()
         target = {}
         for position in positions:
@@ -885,15 +966,6 @@ class AsyncHyperliquid(AsyncAPI):
         }
 
         return await self.place_order(**close_order)
-
-    def get_leverage_from_positions(self, positions: list[Position]):
-        leverages = {}
-        for position in positions:
-            coin = position["coin"]
-            leverage = position["leverage"]["value"]
-            leverages[coin] = leverage
-
-        return leverages
 
 
 AsyncHyper = AsyncHyperliquid

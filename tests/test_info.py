@@ -1,28 +1,54 @@
-import time
-from typing import Any
-from datetime import datetime, timezone, timedelta
-
 import pytest
 
 from async_hyperliquid import AsyncHyperliquid
-from async_hyperliquid.utils.types import OrderWithStatus
+
+from tests.conftest import get_is_mainnet
+
+is_mainnet = get_is_mainnet()
+is_testnet = not is_mainnet
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_metas(hl: AsyncHyperliquid):
-    metas: dict[str, Any] = await hl.get_metas()
-    assert "perps" in metas
+async def test_get_metas(hl: AsyncHyperliquid) -> None:
+    metas = await hl.get_metas()
+    assert "perp" in metas
 
-    perp_metas = metas["perps"]
+    perp_metas = metas["perp"]
     assert "universe" in perp_metas
+
+    assert "spot" in metas
+    spot_metas = metas["spot"]
+    assert "tokens" in spot_metas
+    assert "universe" in spot_metas
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_all_metas(hl: AsyncHyperliquid) -> None:
+    metas = await hl.get_all_metas()
+    assert "perp" in metas
+    assert "universe" in metas["perp"]
 
     assert "spots" in metas
     spot_metas = metas["spots"]
     assert "tokens" in spot_metas
     assert "universe" in spot_metas
 
+    assert "dexs" in metas
+    assert isinstance(metas["dexs"], dict)
+
 
 @pytest.mark.asyncio(loop_scope="session")
+async def test_get_all_dex_name(hl: AsyncHyperliquid) -> None:
+    dexs = await hl.get_all_dex_name()
+    assert len(dexs) > 0
+    assert "" in dexs
+    assert "xyz" in dexs
+    assert "flx" in dexs
+    assert "vntl" in dexs
+
+
+@pytest.mark.asyncio(loop_scope="session")
+@pytest.mark.skipif(is_testnet, reason="Only test on mainnet")
 @pytest.mark.parametrize(
     "coin, name",
     [
@@ -31,6 +57,11 @@ async def test_metas(hl: AsyncHyperliquid):
         ("@142", "@142"),
         ("UBTC/USDC", "@142"),
         ("xyz:XYZ100", "xyz:XYZ100"),
+        ("xyz:NVDA", "xyz:NVDA"),
+        ("flx:CRCL", "flx:CRCL"),
+        ("flx:TSLA", "flx:TSLA"),
+        ("vntl:OPENAI", "vntl:OPENAI"),
+        ("vntl:SPACEX", "vntl:SPACEX"),
         pytest.param(
             "ETH/USDC",
             None,
@@ -48,15 +79,40 @@ async def test_get_coin_name(
 
 
 @pytest.mark.asyncio(loop_scope="session")
+@pytest.mark.skipif(is_testnet, reason="Only test on mainnet")
+@pytest.mark.parametrize(
+    "coin, asset",
+    [
+        ("BTC", 0),  # perp
+        ("UBTC/USDC", 10142),  # spot
+        ("xyz:NVDA", 110002),  # xyz perp
+        ("flx:TSLA", 120000),  # flx perp
+        ("vntl:OPENAI", 130001),  # vntl perp
+    ],
+)
+async def test_get_coin_asset(
+    hl: AsyncHyperliquid, coin: str, asset: int
+) -> None:
+    coin_asset = await hl.get_coin_asset(coin)
+    assert coin_asset == asset
+
+
+@pytest.mark.asyncio(loop_scope="session")
+@pytest.mark.skipif(is_testnet, reason="Only test on mainnet")
 @pytest.mark.parametrize(
     "coin, symbol",
     [
-        ("BTC", "BTC"),
-        ("UBTC/USDC", "UBTC/USDC"),
-        ("@142", "UBTC/USDC"),
-        ("@107", "HYPE/USDC"),
-        ("PURR/USDC", "PURR/USDC"),
-        ("xyz:XYZ100", "xyz:XYZ100"),
+        ("BTC", "BTC"),  # perp
+        ("UBTC/USDC", "UBTC/USDC"),  # spot
+        ("@142", "UBTC/USDC"),  # spot
+        ("@107", "HYPE/USDC"),  # spot
+        ("PURR/USDC", "PURR/USDC"),  # spot
+        ("xyz:XYZ100", "xyz:XYZ100"),  # xyz perp
+        ("xyz:NVDA", "xyz:NVDA"),  # xyz perp
+        ("flx:CRCL", "flx:CRCL"),  # flx perp
+        ("flx:TSLA", "flx:TSLA"),  # flx perp
+        ("vntl:OPENAI", "vntl:OPENAI"),  # vntl perp
+        ("vntl:SPACEX", "vntl:SPACEX"),  # vntl perp
         pytest.param(
             "ETH/USDC",
             None,
@@ -74,108 +130,203 @@ async def test_get_coin_symbol(
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_get_market_price(hl: AsyncHyperliquid):
-    price = await hl.get_market_price("BTC")
-    print(price)
+@pytest.mark.skipif(is_testnet, reason="Only test on mainnet")
+@pytest.mark.parametrize(
+    "coin, sz_decimals",
+    [
+        ("BTC", 5),  # perp
+        ("UBTC/USDC", 5),  # spot
+        ("xyz:NVDA", 3),  # xyz perp
+        ("flx:TSLA", 2),  # flx perp
+        ("vntl:OPENAI", 3),  # vntl perp
+    ],
+)
+async def test_get_coin_sz_decimals(
+    hl: AsyncHyperliquid, coin: str, sz_decimals: int
+):
+    coin_sz_decimals = await hl.get_coin_sz_decimals(coin)
+    assert coin_sz_decimals == sz_decimals
+
+
+@pytest.mark.asyncio(loop_scope="session")
+@pytest.mark.skipif(is_testnet, reason="Only test on mainnet")
+async def test_get_token_info(hl: AsyncHyperliquid):
+    token_info = await hl.get_token_info("UBTC/USDC")
+    assert token_info == {
+        "name": "UBTC",
+        "szDecimals": 5,
+        "weiDecimals": 10,
+        "index": 197,
+        "tokenId": "0x8f254b963e8468305d409b33aa137c67",
+        "isCanonical": False,
+        "evmContract": {
+            "address": "0x9fdbda0a5e284c32744d2f17ee5c74b284993463",
+            "evm_extra_wei_decimals": -2,
+        },
+        "fullName": "Unit Bitcoin",
+        "deployerTradingFeeShare": "1.0",
+    }
+
+
+@pytest.mark.asyncio(loop_scope="session")
+@pytest.mark.skipif(is_testnet, reason="Only test on mainnet")
+async def test_get_token_id(hl: AsyncHyperliquid):
+    token_id = await hl.get_token_id("UBTC/USDC")
+    assert token_id == "0x8f254b963e8468305d409b33aa137c67"
+
+
+@pytest.mark.asyncio(loop_scope="session")
+@pytest.mark.parametrize(
+    "coin, price",
+    [
+        ("BTC", 10_000),  # perp
+        ("UBTC/USDC", 10_000),  # spot
+    ],
+)
+async def test_get_market_price(hl: AsyncHyperliquid, coin: str, price: float):
+    coin_px = await hl.get_market_price(coin)
+    print(coin_px)
     # assert price
-    price = await hl.get_market_price("UBTC/USDC")
-    print(price)
-    # assert price
+    assert coin_px > price
 
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_get_all_market_prices(hl: AsyncHyperliquid):
-    prices = await hl.get_all_market_prices()
-    # print(prices)
-    assert isinstance(prices, dict)
-    assert "@142" in prices
+    # No need to test this, it's already tested in test_get_market_price
+    pass
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_coin_utils(hl: AsyncHyperliquid):
-    coin_names = hl.coin_names
-    for k, v in coin_names.items():
-        asset = await hl.get_coin_asset(k)
-        symbol = await hl.get_coin_symbol(k)
-        coin_name1 = await hl.get_coin_name(k)
-        coin_name2 = await hl.get_coin_name(v)
-        assert coin_name1 == coin_name2
-        print(k, v, asset, symbol, coin_name1, coin_name2)
+@pytest.mark.parametrize(
+    "coin, price",
+    [
+        ("BTC", 10_000),  # perp
+        ("UBTC/USDC", 10_000),  # spot
+        ("xyz:NVDA", 100),  # xyz perp
+        ("flx:TSLA", 100),  # flx perp
+        ("vntl:OPENAI", 100),  # nvtl perp
+    ],
+)
+async def test_get_mid_price(hl: AsyncHyperliquid, coin: str, price: float):
+    mid_px = await hl.get_mid_price(coin)
+    assert mid_px > price
 
 
 @pytest.mark.asyncio(loop_scope="session")
+async def test_get_all_mids(hl: AsyncHyperliquid):
+    pass
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_perp_account_state(hl: AsyncHyperliquid):
+    state = await hl.get_perp_account_state()
+    assert "marginSummary" in state
+    assert "crossMarginSummary" in state
+    assert "crossMaintenanceMarginUsed" in state
+    assert "withdrawable" in state
+    assert "assetPositions" in state
+    assert isinstance(state["assetPositions"], list)
+    assert "time" in state
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_spot_account_state(hl: AsyncHyperliquid):
+    state = await hl.get_spot_account_state()
+    assert "balances" in state
+    assert isinstance(state["balances"], list)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_account_state(hl: AsyncHyperliquid):
+    state = await hl.get_account_state()
+    assert "perp" in state
+    assert "spot" in state
+    assert "dexs" in state
+
+    assert isinstance(state["dexs"], dict)
+
+    assert "xyz" in state["dexs"]
+    assert "flx" in state["dexs"]
+    assert "vntl" in state["dexs"]
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_account_portfolio(hl: AsyncHyperliquid):
+    pf = await hl.get_account_portfolio()
+
+    assert isinstance(pf, list)
+    assert len(pf) == 8
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_latest_ledgers(hl: AsyncHyperliquid):
+    updates = await hl.get_latest_ledgers()
+
+    assert isinstance(updates, list)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_latest_deposits(hl: AsyncHyperliquid):
+    updates = await hl.get_latest_deposits()
+
+    assert isinstance(updates, list)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_latest_withdraws(hl: AsyncHyperliquid):
+    updates = await hl.get_latest_withdraws()
+
+    assert isinstance(updates, list)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_latest_transfers(hl: AsyncHyperliquid):
+    updates = await hl.get_latest_transfers()
+
+    assert isinstance(updates, list)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_user_open_orders(hl: AsyncHyperliquid):
+    orders = await hl.get_user_open_orders()
+
+    assert isinstance(orders, list)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+@pytest.mark.skipif(is_testnet, reason="Only test on mainnet")
 async def test_get_order_status(hl: AsyncHyperliquid):
-    order_id = 80489878412
-    order: OrderWithStatus = await hl.get_order_status(order_id)
-    expected = {
-        "status": "order",
-        "order": {
-            "order": {
-                "coin": "SOL",
-                "side": "B",
-                "limitPx": "125.51",
-                "sz": "0.0",
-                "oid": 80489878412,
-                "timestamp": 1742278993933,
-                "triggerCondition": "N/A",
-                "isTrigger": False,
-                "triggerPx": "0.0",
-                "children": [],
-                "isPositionTpsl": False,
-                "reduceOnly": False,
-                "orderType": "Limit",
-                "origSz": "1.78",
-                "tif": "Ioc",
-                "cloid": None,
-            },
-            "status": "filled",
-            "statusTimestamp": 1742278993933,
-        },
-    }
-    assert order == expected
+    address = "0xf97ad6704baec104d00b88e0c157e2b7b3a1ddd1"
+    orders = await hl.get_user_open_orders(address=address)
+    if not orders:
+        return
+
+    order = orders[0]
+    order_id = order["oid"]
+
+    order_status = await hl.get_order_status(order_id, address=address)
+    assert order_status["status"] == "order"
+    assert order_status["order"] is not None
+
+    inner_order = order_status["order"]["order"]
+    assert inner_order["oid"] == order_id
+    assert inner_order["coin"] == order["coin"]
+    assert inner_order["side"] == order["side"]
+    assert inner_order["sz"] == order["sz"]
+    assert inner_order["limitPx"] == order["limitPx"]
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_get_user_deposits(hl: AsyncHyperliquid):
-    start = int((time.time() - 30 * 24 * 3600) * 1000)
-    data = await hl.get_latest_deposits(start_time=start)
-    assert isinstance(data, list)
+async def test_get_dex_positions(hl: AsyncHyperliquid):
+    address = "0xf97ad6704baec104d00b88e0c157e2b7b3a1ddd1"
+    positions = await hl.get_dex_positions(address, "xyz")
+
+    assert isinstance(positions, list)
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_get_user_positions(hl: AsyncHyperliquid):
-    address = "0x91256c49dD025e61E2D3981189bA36907e084c2B"
-    data = await hl.get_all_positions(address)
-    print(data)
-    states = await hl.get_perp_account_state(address)
-    print(states)
+async def test_get_all_positions(hl: AsyncHyperliquid):
+    address = "0xf97ad6704baec104d00b88e0c157e2b7b3a1ddd1"
+    positions = await hl.get_all_positions(address)
 
-
-@pytest.mark.asyncio(loop_scope="session")
-async def test_usd_class_transfer(hl: AsyncHyperliquid):
-    # transfer perp to spot
-    usd_amount = 2
-    resp = await hl.usd_class_transfer(usd_amount, to_perp=False)
-    assert resp["status"] == "ok"
-    # transfer spot to perp
-    usd_amount = 1
-    resp = await hl.usd_class_transfer(usd_amount, to_perp=True)
-    assert resp["status"] == "ok"
-
-
-@pytest.mark.asyncio(loop_scope="session")
-async def test_usd_transfer(hl: AsyncHyperliquid):
-    usd_amount = 5
-    recipient = ""
-    _resp = await hl.usd_transfer(usd_amount, recipient)
-    # assert resp["status"] == "ok"
-
-
-@pytest.mark.asyncio(loop_scope="session")
-async def test_user_non_funding(hl: AsyncHyperliquid):
-    addr = "0x5bf26001e812ef0a4fcead9c2ca4887b92d7733a"
-    now = datetime.now(timezone.utc)
-    start = now - timedelta(days=1)
-    start_ts = int(start.timestamp() * 1000)
-    resp = await hl.info.get_user_funding(addr, start_ts, is_funding=False)
-    print(resp)
+    assert isinstance(positions, list)

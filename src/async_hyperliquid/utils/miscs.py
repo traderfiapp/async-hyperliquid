@@ -2,6 +2,7 @@ import math
 import time
 from typing import Any
 from decimal import Decimal
+from .types import Position
 
 
 def get_timestamp_ms() -> int:
@@ -51,6 +52,16 @@ def round_token_amount(amount: float, decimals: int) -> str:
     factor = 10**decimals
     rounded = math.floor(amount * factor) / factor
     return f"{rounded:.{decimals}f}".rstrip("0").rstrip(".")
+
+
+def get_leverages_from_positions(positions: list[Position]) -> dict[str, int]:
+    leverages = {}
+    for position in positions:
+        coin = position["coin"]
+        leverage = position["leverage"]["value"]
+        leverages[coin] = leverage
+
+    return leverages
 
 
 def get_coin_dex(coin: str) -> str:
