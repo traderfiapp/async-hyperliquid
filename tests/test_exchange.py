@@ -73,16 +73,19 @@ async def test_perp_order(hl: AsyncHyperliquid):
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_perp_dex_order(hl: AsyncHyperliquid):
-    coin = "xyz:XYZ100"
+    coin = "xyz:NVDA"
 
     payload = {
         "coin": coin,
         "is_buy": True,
         "sz": 0.1,
-        "px": 100,
-        "is_market": True,
+        "px": 170,
+        "is_market": False,
+        "order_type": LimitOrder.ALO.value,
     }
     resp = await hl.place_order(**payload)
+
+    print(resp)
 
     assert resp["status"] == "ok"
     assert isinstance(resp["response"], dict)
