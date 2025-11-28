@@ -4,14 +4,19 @@ import pytest
 
 from async_hyperliquid import AsyncHyperliquid
 from async_hyperliquid.utils.types import Cloid, LimitOrder
+from tests.conftest import get_is_mainnet
+
+is_mainnet = get_is_mainnet()
+is_testnet = not is_mainnet
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_update_leverage(hl: AsyncHyperliquid):
-    leverage = 10
-    coin = "BTC"
-    resp = await hl.update_leverage(leverage, coin)
-    print(resp)
+@pytest.mark.skipif(is_testnet, reason="Only test on mainnet")
+@pytest.mark.parametrize("coin", ["BTC", "xyz:NVDA", "flx:TSLA", "vntl:OPENAI"])
+async def test_update_leverage(hl: AsyncHyperliquid, coin: str):
+    leverage = 1
+    resp = await hl.update_leverage(leverage, coin, is_cross=False)
+
     assert resp["status"] == "ok"
 
 

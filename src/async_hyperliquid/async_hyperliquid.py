@@ -336,7 +336,7 @@ class AsyncHyperliquid(AsyncAPI):
         if not address:
             address = self.address
 
-        return await self.info.get_perp_clearinghouse_state(address)
+        return await self.info.get_perp_clearinghouse_state(address, dex)
 
     async def get_spot_account_state(
         self, address: str | None = None
